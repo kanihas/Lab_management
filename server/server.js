@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 
 import connectDB from './config/mongodb.js';
 import { captureIpMiddleware, logAudit } from './middleware/audit.js';
+import keepAlive from './utils/keepAlive.js';
 
 // Import routes
 import authRoutes from './routes/auth.js';
@@ -90,6 +91,9 @@ const startServer = async () => {
       console.log(`\n✅ Server running at http://localhost:${PORT}`);
       console.log(`📦 Database: mkce-portal`);
       console.log(`🔐 JWT Enabled for authentication\n`);
+
+      // Start keep-alive service for Render
+      keepAlive();
     });
   } catch (error) {
     console.error('Failed to start server:', error);
