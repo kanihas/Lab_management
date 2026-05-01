@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - System Management</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --admin-primary: #3b82f6;
+            --admin-secondary: #1e293b;
+            --sidebar-width: 260px;
+            --sidebar-bg: #111827;
+            --content-bg: #0f172a;
+            --card-bg: #1e293b;
+            --border-color: rgba(255,255,255,0.08);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+        }
+
+        body {
+            margin: 0;
+            background: var(--content-bg);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+        }
+
+        .app-layout {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* Sidebar Styles matching Image */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem 0;
+            z-index: 100;
+        }
+
+        .sidebar-brand {
+            padding: 0 1.5rem 1.5rem;
+            font-size: 1.4rem;
+            font-weight: 700;
+            font-family: 'Outfit';
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: white;
+        }
+
+        .sidebar-profile {
+            padding: 1.5rem;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .profile-avatar {
+            width: 80px; height: 80px;
+            background: #3b82f6;
+            margin: 0 auto 1rem;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2.5rem; color: white;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+        }
+
+        .profile-name { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.25rem; }
+        .profile-id { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem; }
+        .dept-badge {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            padding: 0.35rem 1rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .sidebar-menu {
+            flex: 1;
+            padding: 1.5rem 0.75rem;
+        }
+
+        .menu-item {
+            display: flex; align-items: center; gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 8px;
+            margin-bottom: 0.25rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .menu-item.active {
+            background: rgba(59, 130, 246, 0.15);
+            color: white;
+        }
+
+        .menu-item:hover:not(.active) {
+            background: rgba(255,255,255,0.05);
+            color: white;
+        }
+
+        .sidebar-footer {
+            padding: 1rem 0.75rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .logout-btn {
+            display: flex; align-items: center; gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            color: #ef4444;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        /* Main Content Styles */
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+        }
+
+        .top-header {
+            height: 70px;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 2rem;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--content-bg);
+            position: sticky; top: 0; z-index: 50;
+        }
+
+        .header-title { font-size: 1.5rem; font-weight: 700; font-family: 'Outfit'; }
+
+        .search-container {
+            display: flex; align-items: center; gap: 0.8rem;
+            background: #1e293b;
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .search-input {
+            background: transparent; border: none; color: white; width: 220px; font-size: 0.85rem; outline: none;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            font-family: 'Outfit';
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: var(--text-primary);
+        }
+
+        .stat-details h3 { margin: 0; font-size: 1.8rem; line-height: 1.2; }
+        .stat-details p { margin: 0; font-size: 0.75rem; color: var(--text-secondary); font-weight: 600; letter-spacing: 0.05em; }
+
+        .container { padding: 2rem; }
+
+        /* Component Grid */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        .middle-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+
+        .glass-panel { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; }
+
+        .stat-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .chart-container { height: 250px; background: rgba(15, 23, 42, 0.4); border-radius: 12px; margin: 1rem 0; display: flex; align-items: center; justify-content: center; }
+        .table-scroll { max-height: 480px; overflow-y: auto; background: rgba(15, 23, 42, 0.4); border: 1px solid var(--border-color); border-radius: 8px; margin-top: 1rem; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: rgba(30, 41, 59, 1); padding: 0.75rem 1rem; font-size: 0.7rem; text-transform: uppercase; color: #94a3b8; text-align: left; position: sticky; top: 0; border-bottom: 1px solid var(--border-color); z-index: 10; }
+        td { padding: 0.75rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.8rem; color: #cbd5e1; }
+
+        .badge { padding: 0.3rem 0.6rem; border-radius: 4px; font-weight: 600; font-size: 0.7rem; }
+        .badge-working { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+        .badge-not-working { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+        .badge-maintenance { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+
+        .btn-primary { background: #3b82f6; border: none; color: white; padding: 0.5rem 1.2rem; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.85rem; }
+        .btn-primary:hover { opacity: 0.9; }
+    </style>
+</head>
+
+<body class="theme-admin">
+    <div class="app-layout">
+        <!-- Sidebar exactly like Image -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <i class="fas fa-shield-alt" style="color: var(--admin-primary);"></i>
+                <span>Dashboard</span>
+            </div>
+
+            <div class="sidebar-profile">
+                <div class="profile-avatar">
+                    <i class="fas fa-user-shield"></i>
+                </div>
+                <div class="profile-name">Admin</div>
+                <div class="profile-id">ID: 114210</div>
+                <div class="dept-badge">ECE DEPT</div>
+            </div>
+
+            <nav class="sidebar-menu">
+                <a href="#" class="menu-item active">
+                    <i class="fas fa-table-columns"></i> Dashboard
+                </a>
+                <a href="#" onclick="downloadReport()" class="menu-item">
+                    <i class="fas fa-download"></i> Download Report
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <a href="#" id="logoutBtn" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <header class="top-header">
+                <div class="header-info">
+                    <h2 class="header-title">ECE Department Total Systems Monitoring Panel</h2>
+                    <p class="header-subtitle" style="color: var(--text-secondary); font-size: 0.85rem; font-weight: 500; margin-top: 2px;">Total Systems: 156 Active Systems Connected</p>
+                </div>
+                
+                <div class="search-container">
+                    <span style="color: var(--text-secondary); font-size: 0.75rem;">Search System ID:</span>
+                    <input type="text" id="globalSearchInput" placeholder="Enter System ID..." class="search-input">
+                    <button onclick="searchSystem()" class="btn-primary" style="padding: 0.35rem 0.8rem;"><i class="fas fa-search"></i> Search</button>
+                    <button class="btn-outline" style="background:none; border:none; color:var(--text-secondary); padding: 0.5rem; cursor:pointer;"><i class="fas fa-cog"></i></button>
+                </div>
+            </header>
+
+            <div class="container">
+                <!-- Metrics Grid -->
+                <div class="stats-grid">
+                    <div class="stat-card glass-panel" style="display:flex; align-items:center; gap: 1.25rem;">
+                        <div class="stat-icon" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6;"><i class="fas fa-desktop"></i></div>
+                        <div class="stat-details"><h3>156</h3><p>TOTAL SYSTEMS</p></div>
+                    </div>
+                    <div class="stat-card glass-panel" style="display:flex; align-items:center; gap: 1rem;">
+                        <div class="stat-icon" style="background: rgba(168, 85, 247, 0.15); color: #a855f7;"><i class="fas fa-exclamation-triangle"></i></div>
+                        <div class="stat-details"><h3 id="activeComp">8</h3><p>ACTIVE ISSUES</p></div>
+                    </div>
+                    <div class="stat-card glass-panel" style="display:flex; align-items:center; gap: 1rem;">
+                        <div class="stat-icon" style="background: rgba(16, 185, 129, 0.15); color: #10b981;"><i class="fas fa-check-circle"></i></div>
+                        <div class="stat-details"><h3 id="resolvedComp">6</h3><p>RESOLVED ISSUES</p></div>
+                    </div>
+                    <div class="stat-card glass-panel" style="display:flex; align-items:center; gap: 1rem;">
+                        <div class="stat-icon" style="background: rgba(6, 182, 212, 0.15); color: #06b6d4;"><i class="fas fa-heartbeat"></i></div>
+                        <div class="stat-details"><h3 id="readinessScore">100%</h3><p>DEPT READINESS</p></div>
+                    </div>
+                </div>
+
+                <!-- Global Search Results -->
+                <div id="searchResultSection" style="display: none; margin-bottom: 2rem;">
+                    <div class="glass-panel" style="border: 1px solid var(--admin-primary); position: relative;">
+                        <button onclick="document.getElementById('searchResultSection').style.display='none'" style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; color: white; cursor: pointer;"><i class="fas fa-times"></i></button>
+                        <h3 class="section-title"><i class="fas fa-search"></i> Search Result</h3>
+                        <div id="searchResultContent" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-top: 1rem;"></div>
+                    </div>
+                </div>
+
+                <!-- 3-Column Middle Grid from Image -->
+                <div class="middle-grid">
+                    <!-- Column 1: Lab Hierarchy -->
+                    <div class="glass-panel">
+                        <h3 class="section-title"><i class="fas fa-building" style="color: #3b82f6;"></i> Lab Details Overview</h3>
+                        <div class="table-scroll">
+                            <table>
+                                <thead>
+                                    <tr><th>LAB NAME</th><th>ROOM NO</th><th>INCHARGE</th></tr>
+                                </thead>
+                                <tbody id="labDetailsBody">
+                                    <!-- Dynamic -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Column 2: Operational Health (Chart + List) -->
+                    <div class="glass-panel">
+                        <h3 class="section-title"><i class="fas fa-microchip" style="color: #3b82f6;"></i> System Status</h3>
+                        <div class="chart-container">
+                            <canvas id="systemChart"></canvas>
+                        </div>
+                        <div class="table-scroll" style="max-height: 250px;">
+                            <table>
+                                <thead>
+                                    <tr><th>SYSTEM ID</th><th>STATUS</th></tr>
+                                </thead>
+                                <tbody id="systemsTableBody">
+                                    <!-- Dynamic -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Column 3: Monitor & Queue -->
+                    <div class="glass-panel">
+                        <h3 class="section-title"><i class="fas fa-clipboard-list" style="color: #3b82f6;"></i> Issues & Complaints</h3>
+                        <div style="display: flex; gap: 0.4rem; margin-bottom: 1rem; padding: 0.4rem; background: rgba(0,0,0,0.15); border-radius: 6px;">
+                            <input type="text" id="searchSysId" style="flex:1; background:transparent; border:none; color:white; font-size:0.8rem; outline:none;" placeholder="Filter ID..." onkeyup="filterComplaints()">
+                            <select id="filterStatus" style="background:transparent; border:none; color:var(--text-secondary); font-size:0.8rem;" onchange="filterComplaints()">
+                                <option value="All">All Status</option>
+                                <option value="Waiting for Lab Incharge Approval">Review</option>
+                                <option value="Assigned to Technician">Assigned</option>
+                                <option value="Closed">Closed</option>
+                            </select>
+                        </div>
+
+                        <!-- Active Complaints -->
+                        <h4 style="font-size: 0.7rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 0.5rem; letter-spacing: 0.05em; font-weight: 700;">Active Complaints</h4>
+                        <div id="activeWrapper" style="display: block;">
+                            <div class="table-scroll" style="max-height: 200px; margin-bottom: 0.5rem; border: 1px solid rgba(255,255,255,0.05); border-radius: 8px;">
+                                <table>
+                                    <tbody id="activeComplaintsBody">
+                                        <!-- Dynamic -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <button onclick="clearActiveView()" class="btn-primary" style="width: 100%; margin-bottom: 1.5rem; background: rgba(239, 68, 68, 0.05); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2); font-size: 0.65rem; text-transform: uppercase; font-weight: 700; padding: 0.4rem;">
+                                [ Clear Active View ]
+                            </button>
+                        </div>
+
+                        <!-- Resolved Complaints -->
+                        <div id="resolvedWrapper" style="display: block;">
+                            <h4 style="font-size: 0.7rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 0.5rem; letter-spacing: 0.05em; font-weight: 700;">Resolved Complaints</h4>
+                            <div class="table-scroll" style="max-height: 200px; border: 1px solid rgba(255,255,255,0.05); border-radius: 8px;">
+                                <table>
+                                    <tbody id="resolvedComplaintsBody">
+                                        <!-- Dynamic -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <button onclick="clearResolvedView()" class="btn-primary" style="width: 100%; margin-top: 1rem; background: rgba(59, 130, 246, 0.1); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); font-size: 0.7rem; text-transform: uppercase; font-weight: 700; padding: 0.6rem;">
+                            [ Clear Resolved View ]
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Secondary Row: Fulfillment & Communications -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 2rem;">
+                    <!-- Stock Queue -->
+                    <div class="glass-panel">
+                        <h3 class="section-title"><i class="fas fa-truck-loading" style="color: #60a5fa;"></i> Fulfillment Queue</h3>
+                        <div class="table-scroll" style="max-height: 250px;">
+                            <table>
+                                <thead>
+                                    <tr><th>REQUESTER</th><th>ITEM & QTY</th><th>STATUS</th><th>ACTIONS</th></tr>
+                                </thead>
+                                <tbody id="adminStockQueueBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Broadcast Engines -->
+                    <div class="glass-panel">
+                        <h3 class="section-title"><i class="fas fa-bullhorn" style="color: #f472b6;"></i> Broadcast Notice</h3>
+                        <form id="broadcastForm">
+                            <textarea id="noticeMsg" rows="3" placeholder="Post global announcement..." style="background:rgba(0,0,0,0.2); border:1px solid var(--border-color); color:white; width:100%; border-radius:10px; padding:1rem; resize:none; margin-bottom:1rem; outline:none;"></textarea>
+                            <button type="submit" class="btn-primary" style="width:100%"><i class="fas fa-paper-plane"></i> Send Broadcast</button>
+                        </form>
+                        <div id="recentNotices" style="margin-top: 1rem; max-height: 80px; overflow-y: auto;"></div>
+                    </div>
+                </div>
+
+                <!-- Inventory Audit (Full Width) -->
+                <div class="glass-panel" style="margin-top: 2rem;">
+                    <h3 class="section-title"><i class="fas fa-boxes-stacked" style="color: #10b981;"></i> Global Inventory Audit</h3>
+                    <div class="table-scroll" style="max-height: 200px;">
+                        <table>
+                            <thead>
+                                <tr><th>Item Identification</th><th>Current Stock Count</th></tr>
+                            </thead>
+                            <tbody id="adminInventoryTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        let resolvedHidden = false;
+        let activeHidden = false;
+        document.addEventListener('DOMContentLoaded', () => {
+            initDB();
+            const user = Auth.requireAuth(['admin']);
+            if (!user) return;
+
+            let systemChartInstance = null;
+
+            function formatSysName(id) {
+                if (!id) return "Unknown";
+                return String(id).replace('PC-NL-', 'NL-').replace('PC-PL-', 'PL-').replace('PC-EMP-', 'EMP-').replace('PC-PCB-', 'PCB-').replace('PC-DSP-', 'DSP-');
+            }
+            
+            function renderDashboard() {
+                const db = getDB();
+                if (!db || !db.labs || db.labs.length === 0) { localStorage.removeItem('portal_db'); location.reload(); return; }
+                
+                const systems = db.systems || [];
+                const complaints = db.complaints || [];
+
+                document.getElementById('activeComp').textContent = complaints.filter(c => c.status !== 'Resolved' && c.status !== 'Closed').length;
+                document.getElementById('resolvedComp').textContent = complaints.filter(c => c.status === 'Resolved' || c.status === 'Closed').length;
+                const working = systems.filter(s => s.status === 'Working').length;
+                document.getElementById('readinessScore').textContent = systems.length ? Math.round((working / systems.length) * 100) + '%' : '100%';
+
+                renderAnalyticsChart(systems, complaints);
+                renderLabDetailsTable(db.labs);
+                renderSystemsTable(systems, complaints);
+                renderComplaintsTable(complaints);
+                renderAdminStockQueue();
+                renderAdminInventory();
+                renderAdminNotices();
+            }
+
+            function renderAnalyticsChart(systems, complaints) {
+                const ctx = document.getElementById('systemChart');
+                if (!ctx) return;
+                
+                let working = 0, maintenance = 0, faulty = 0;
+                
+                systems.forEach(sys => {
+                    const activeComplaint = complaints.find(cx => cx.sys_id === sys.id && cx.status !== 'Closed' && cx.status !== 'Resolved');
+                    let displayStatus = sys.status;
+                    if (activeComplaint) {
+                        displayStatus = (activeComplaint.status === 'In Progress' || activeComplaint.status === 'Assigned to Technician') ? 'Under Maintenance' : 'Not Working';
+                    } else {
+                        displayStatus = 'Working';
+                    }
+                    
+                    if (displayStatus === 'Working') working++;
+                    else if (displayStatus === 'Under Maintenance') maintenance++;
+                    else faulty++;
+                });
+
+                if (systemChartInstance) systemChartInstance.destroy();
+                systemChartInstance = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Working', 'Maintenance', 'Faulty'],
+                        datasets: [{ data: [working, maintenance, faulty], backgroundColor: ['#10b981', '#f59e0b', '#ef4444'], borderWidth: 0 }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, cutout: '78%', plugins: { legend: { position: 'right', labels: { color: '#94a3b8' } } } }
+                });
+            }
+
+            function renderLabDetailsTable(labs) {
+                const body = document.getElementById('labDetailsBody');
+                if (!body) return;
+                body.innerHTML = labs.map(l => `<tr><td><strong>${l.name}</strong></td><td><span class="badge" style="background:#334155;">${l.room || 'N/A'}</span></td><td>${l.maintainer || 'N/A'}</td></tr>`).join('');
+            }
+
+            function renderSystemsTable(systems, complaints) {
+                const body = document.getElementById('systemsTableBody');
+                if (!body) return;
+                body.innerHTML = systems.map(sys => {
+                    const activeComplaint = complaints.find(cx => cx.sys_id === sys.id && cx.status !== 'Closed' && cx.status !== 'Resolved');
+                    
+                    // Determine status display
+                    let displayStatus = sys.status;
+                    if (activeComplaint) {
+                        displayStatus = (activeComplaint.status === 'In Progress' || activeComplaint.status === 'Assigned to Technician') ? 'Under Maintenance' : 'Not Working';
+                    } else {
+                        displayStatus = 'Working';
+                    }
+
+                    let sCol = displayStatus === 'Working' ? 'badge-working' : (displayStatus === 'Not Working' ? 'badge-not-working' : 'badge-maintenance');
+                    let sTxt = displayStatus === 'Working' ? '🟢 Working' : (displayStatus === 'Not Working' ? '🔴 Failed' : '🟡 Maintenance');
+                    
+                    return `<tr><td><strong>${formatSysName(sys.id)}</strong></td><td><span class="badge ${sCol}">${sTxt}</span></td></tr>`;
+                }).join('');
+            }
+
+            function renderComplaintsTable(complaints) {
+                const activeBody = document.getElementById('activeComplaintsBody');
+                const resolvedBody = document.getElementById('resolvedComplaintsBody');
+                const activeWrapper = document.getElementById('activeWrapper');
+                const resolvedWrapper = document.getElementById('resolvedWrapper');
+                
+                if (!activeBody || !resolvedBody) return;
+                
+                const filter = document.getElementById('filterStatus').value;
+                const search = document.getElementById('searchSysId').value.toLowerCase();
+                
+                const filtered = complaints.slice().reverse().filter(c => {
+                    return formatSysName(c.sys_id).toLowerCase().includes(search) && (filter === 'All' || c.status === filter);
+                });
+
+                const activeComplaints = filtered.filter(c => c.status !== 'Resolved' && c.status !== 'Closed');
+                const resolvedComplaints = filtered.filter(c => c.status === 'Resolved' || c.status === 'Closed');
+
+                activeBody.innerHTML = activeComplaints.map(c => renderComplaintRow(c)).join('') || '<tr><td style="text-align:center; padding:1rem; opacity:0.5; font-size:0.8rem;">No active issues</td></tr>';
+                resolvedBody.innerHTML = resolvedComplaints.map(c => renderComplaintRow(c)).join('') || '<tr><td style="text-align:center; padding:1rem; opacity:0.5; font-size:0.8rem;">No resolved issues</td></tr>';
+                
+                if (activeWrapper) activeWrapper.style.display = activeHidden ? 'none' : 'block';
+                if (resolvedWrapper) resolvedWrapper.style.display = resolvedHidden ? 'none' : 'block';
+            }
+
+            function renderComplaintRow(c) {
+                return `<tr><td><strong>${formatSysName(c.sys_id)}</strong><br><small style="color:#64748b;">${c.id}</small></td><td><span class="badge ${c.status === 'Closed' || c.status === 'Resolved' ? 'badge-working' : 'badge-not-working'}">${c.status}</span><br><small style="color:#94a3b8; font-size:0.65rem;">${window.renderComplaintLiveTimer ? window.renderComplaintLiveTimer(c, 'Track') : ''}</small></td></tr>`;
+            }
+
+            window.clearActiveView = () => {
+                activeHidden = true;
+                renderDashboard();
+            };
+
+            window.clearResolvedView = () => {
+                resolvedHidden = true;
+                renderDashboard();
+            };
+
+            function renderAdminStockQueue() {
+                const db = getDB();
+                const body = document.getElementById('adminStockQueueBody');
+                if(!body) return;
+                
+                // Fetch Pending Admin Approval, Approved, and recently Completed requests
+                const requests = (db.stockRequests || []).filter(r => 
+                    r.status === 'Pending Admin Approval' || 
+                    r.status === 'Approved' || 
+                    r.status === 'Completed'
+                ).slice(-15).reverse();
+
+                body.innerHTML = requests.length ? requests.map(r => {
+                    let actionBtn = '';
+                    let statusBadge = '';
+                    let crtLabel = '';
+
+                    if (r.status === 'Pending Admin Approval') {
+                        statusBadge = '<span class="badge badge-pending">Pending</span>';
+                        actionBtn = `<button class="btn-primary" style="padding:0.3rem 0.6rem; font-size:0.7rem; background:#3b82f6; border:none;" onclick="adminApprove('${r.id}')">Approve</button>`;
+                    } else if (r.status === 'Approved') {
+                        statusBadge = '<span class="badge badge-maintenance">Approved</span>';
+                        actionBtn = `<button class="btn-primary" style="padding:0.3rem 0.6rem; font-size:0.7rem; background:#10b981; border:none;" onclick="fulfillStock('${r.id}')">Fulfill</button>`;
+                    } else if (r.status === 'Completed') {
+                        statusBadge = '<span class="badge badge-working">Completed</span>';
+                        if (r.completionDate) {
+                            const diff = Math.round((new Date(r.completionDate) - new Date(r.date)) / (1000 * 60));
+                            crtLabel = `<br><small style="color:#34d399; font-weight:700; font-size:0.65rem;">CRT: ${diff} mins</small>`;
+                        }
+                    }
+
+                    return `
+                        <tr>
+                            <td><strong>${r.requesterName || 'User'}</strong><br><small style="color:var(--text-secondary);">${r.labId || 'N/A'}</small></td>
+                            <td><strong>${r.itemName}</strong><br><small style="color:#94a3b8;">Qty: +${r.requestedQty}</small></td>
+                            <td>${statusBadge}${crtLabel}</td>
+                            <td>${actionBtn}</td>
+                        </tr>
+                    `;
+                }).join('') : '<tr><td colspan="4" style="text-align:center; padding:1.5rem; opacity:0.5;">Empty Queue</td></tr>';
+            }
+
+            function renderAdminInventory() {
+                const body = document.getElementById('adminInventoryTableBody');
+                if(!body) return;
+                body.innerHTML = DataAPI.getInventory().map(item => `<tr><td><strong>${item.item}</strong></td><td><span style="font-weight:700; color:#10b981;">${item.stock} Units</span></td></tr>`).join('');
+            }
+
+            function renderAdminNotices() {
+                const container = document.getElementById('recentNotices');
+                if (!container) return;
+                container.innerHTML = DataAPI.getNotices().slice().reverse().map(n => `<div style="padding:0.6rem; background:rgba(0,0,0,0.2); border-left:3px solid var(--admin-primary); margin-bottom:0.4rem; border-radius:4px; font-size:0.8rem;"><div style="color:var(--text-secondary); font-size:0.65rem;">${new Date(n.date).toLocaleString()}</div><div>${n.message}</div></div>`).join('');
+            }
+
+            window.adminApprove = (id) => {
+                if (DataAPI && typeof DataAPI.adminApproveStockRequest === 'function') {
+                    DataAPI.adminApproveStockRequest(id);
+                    renderDashboard();
+                }
+            };
+
+            window.fulfillStock = (id) => {
+                if (DataAPI && typeof DataAPI.fulfillStockRequest === 'function') {
+                    DataAPI.fulfillStockRequest(id);
+                    renderDashboard();
+                }
+            };
+            window.filterComplaints = () => renderDashboard();
+            window.searchSystem = () => {
+                const input = document.getElementById('globalSearchInput').value.trim().toUpperCase();
+                if (!input) return;
+                const sys = getDB().systems.find(s => s.id.includes(input) || formatSysName(s.id).includes(input));
+                if (!sys) { alert("Not found"); return; }
+                const section = document.getElementById('searchResultSection');
+                document.getElementById('searchResultContent').innerHTML = `<div class="glass-panel"><strong>${formatSysName(sys.id)}</strong><br>Status: ${sys.status}</div>`;
+                section.style.display = 'block';
+                section.scrollIntoView({ behavior: 'smooth' });
+            };
+
+            document.getElementById('logoutBtn').addEventListener('click', (e) => { e.preventDefault(); Auth.logout(); });
+            
+            const bForm = document.getElementById('broadcastForm');
+            if(bForm) bForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const m = document.getElementById('noticeMsg').value;
+                if(m) { DataAPI.saveNotice({ id:'N'+Date.now(), date:new Date().toISOString(), message:m, author:user.id, dept:'All' }); bForm.reset(); renderDashboard(); }
+            });
+
+            window.downloadReport = () => {
+                const db = getDB();
+                let csv = "MKCE SYSTEM STATUS REPORT\n";
+                csv += "Generated: " + new Date().toLocaleString() + "\n\n";
+
+                // Section 1: Metrics
+                csv += "GENERAL METRICS\n";
+                csv += `Total Systems,${db.systems.length}\n`;
+                csv += `Active Issues,${db.complaints.filter(c => c.status !== 'Resolved' && c.status !== 'Closed').length}\n`;
+                csv += `Resolved Issues,${db.complaints.filter(c => c.status === 'Resolved' || c.status === 'Closed').length}\n\n`;
+
+                // Section 2: Labs
+                csv += "LABORATORY OVERVIEW\n";
+                csv += "Lab Name,Room,Maintainer\n";
+                db.labs.forEach(l => {
+                    csv += `"${l.name}","${l.room || 'N/A'}","${l.maintainer || 'N/A'}"\n`;
+                });
+                csv += "\n";
+
+                // Section 3: Systems
+                csv += "DETAILED SYSTEM STATUS\n";
+                csv += "System ID,Status,Issues\n";
+                db.systems.forEach(s => {
+                    const c = db.complaints.find(cx => cx.sys_id === s.id && cx.status !== 'Closed');
+                    csv += `"${formatSysName(s.id)}","${s.status}","${c ? c.desc : 'None'}"\n`;
+                });
+                csv += "\n";
+
+                // Section 4: Complaints
+                csv += "ALL COMPLAINT RECORDS\n";
+                csv += "Ticket ID,System ID,Description,Status,Date\n";
+                db.complaints.slice().reverse().forEach(c => {
+                    csv += `"${c.id}","${formatSysName(c.sys_id)}","${c.desc.replace(/"/g, '""')}","${c.status}","${new Date(c.date).toLocaleString()}"\n`;
+                });
+
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.setAttribute('hidden', '');
+                a.setAttribute('href', url);
+                a.setAttribute('download', `mkce_admin_report_${new Date().toISOString().split('T')[0]}.csv`);
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            };
+
+            renderDashboard();
+            window.startComplaintLiveTimerLoop();
+        });
+    </script>
+</body>
+</html>

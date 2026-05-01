@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MKCE System Status Portal | Login</title>
+    <!-- Modern Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        /* Login specific styles */
+        .login-bg {
+            background: #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 480px;
+            padding: 20px;
+        }
+        
+        .login-card {
+            padding: 2.5rem 2rem;
+            text-align: center;
+        }
+
+        .error-msg {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 6px;
+            font-size: 0.85rem;
+            padding: 0.5rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            display: none;
+        }
+
+        /* Input styling overrides for this light mode login */
+        .login-input {
+            background: #ffffff !important;
+            border: 1px solid #e2e8f0 !important;
+            color: #0f172a !important;
+            padding: 0.8rem 1rem !important;
+            border-radius: 8px !important;
+        }
+        .login-input:focus {
+            border-color: #38bdf8 !important;
+            box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2) !important;
+        }
+        select.login-input option {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+        }
+        
+        .toggle-password {
+            position: absolute; 
+            right: 15px; 
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8; 
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .toggle-password:hover { color: #0f172a; }
+
+        /* Modal for Password Reset */
+        .modal {
+            display: none; position: fixed; z-index: 2000; left: 0; top: 0;
+            width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.4); backdrop-filter: blur(8px);
+        }
+        .modal-content {
+            background: #ffffff;
+            margin: 10% auto; padding: 2rem; border: 1px solid #e2e8f0;
+            width: 90%; max-width: 420px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+
+<body class="login-bg">
+
+    <div class="login-container">
+        
+        <div style="text-align: center; margin-bottom: 25px;">
+            <div style="margin-bottom: 15px; transform: scale(1.15); margin-top: 10px;">
+                <img src="images/college_logo.png" alt="College Logo" style="width: 100%; max-width: 500px; height: auto; object-fit: contain;">
+            </div>
+            
+            <h2 style="font-size: 1.25rem; font-weight: 700; color: #0f172a; margin-top: 1.5rem; margin-bottom: 0; letter-spacing: -0.2px;">
+                Department of Electronics and Communication Engineering
+            </h2>
+        </div>
+
+        <div class="glass-panel login-card" style="background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);">
+            <h3 style="font-size: 1.15rem; font-weight: 600; margin-bottom: 1.5rem; color: #334155;">System Status Portal</h3>
+
+            <div id="login-error" class="error-msg"><i class="fas fa-exclamation-circle"></i> Faculty ID or password is incorrect.</div>
+
+            <form id="loginForm">
+                <div class="form-group" style="text-align: left; margin-bottom: 1rem;">
+                    <select id="roleSelect" class="form-control login-input" required style="cursor: pointer; appearance: none;">
+                        <option value="" disabled selected>Select Role ▼</option>
+                        <option value="admin">Admin</option>
+                        <option value="staff">Lab Incharge / Student</option>
+                        <option value="technician">Lab Technician</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="text-align: left; margin-bottom: 1rem;">
+                    <select id="deptSelectLogin" class="form-control login-input" required style="cursor: pointer; appearance: none;">
+                        <option value="" disabled selected>Select Department ▼</option>
+                        <option value="ECE">ECE</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="text-align: left; margin-bottom: 1rem;">
+                    <input type="text" id="userId" class="form-control login-input" placeholder="Register Number / Staff ID" required>
+                </div>
+
+                <div class="form-group" style="text-align: left; position: relative; margin-bottom: 1rem;">
+                    <input type="password" id="password" class="form-control login-input" placeholder="Password" required style="padding-right: 2.5rem;">
+                    <i class="fas fa-eye toggle-password" id="eyeIcon" onclick="togglePass()"></i>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; padding: 0 0.2rem; font-size: 0.85rem; color: #475569;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" id="rememberMe" style="accent-color: #38bdf8; width: 15px; height: 15px; cursor: pointer;">
+                        Remember me
+                    </label>
+                    <a href="#" onclick="handleForgotPassword(event)" style="color: #38bdf8; text-decoration: none; font-weight: 500; transition: 0.2s;" onmouseover="this.style.color='#7dd3fc'" onmouseout="this.style.color='#38bdf8'">Forgot Password?</a>
+                </div>
+
+                <div class="form-group" style="text-align: center; margin-top: 1rem; margin-bottom: 0;">
+                    <button type="submit" class="btn btn-primary" style="width: 100%; border-radius: 8px; padding: 0.85rem; font-size: 1rem; font-weight: 600; letter-spacing: 0.5px; box-shadow: 0 4px 15px rgba(56,189,248,0.3);">
+                        Login to Portal
+                    </button>
+                </div>
+            </form>
+
+            <div style="margin-top: 2.5rem; font-size: 0.7rem; color: #64748b; font-weight: 500;">
+                © 2026 MKCE – Department Maintenance Support System
+            </div>
+        </div>
+    </div>
+
+    <!-- Password Reset Modal -->
+    <div id="resetModal" class="modal">
+        <div class="modal-content">
+            <h3 style="color: #0f172a; margin-top: 0; margin-bottom: 0.5rem;"><i class="fas fa-key" style="color: #38bdf8;"></i> Reset Password</h3>
+            <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 1.5rem;">Enter your College ID below to securely set a new password.</p>
+            
+            <div id="reset-error" class="error-msg"></div>
+            <div id="reset-success" style="display:none; color: #10b981; font-size: 0.85rem; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16,185,129,0.3); padding: 0.5rem; border-radius: 6px; margin-bottom: 1rem; text-align:center;"><i class="fas fa-check-circle"></i> Password updated successfully!</div>
+
+            <form id="resetForm">
+                <div class="form-group" style="text-align: left;">
+                    <label style="font-size:0.8rem; color:#475569; display:block; margin-bottom:0.3rem;">Target College ID</label>
+                    <input type="text" id="resetTargetId" class="form-control login-input" placeholder="e.g. 927623bec..." required>
+                </div>
+                <div class="form-group" style="text-align: left;">
+                    <label style="font-size:0.8rem; color:#475569; display:block; margin-bottom:0.3rem;">New Password</label>
+                    <input type="password" id="resetNewPass" class="form-control login-input" placeholder="New Password" required minlength="4">
+                </div>
+                <div class="form-group" style="text-align: left;">
+                    <label style="font-size:0.8rem; color:#475569; display:block; margin-bottom:0.3rem;">Confirm Password</label>
+                    <input type="password" id="resetConfirmPass" class="form-control login-input" placeholder="Re-type Password" required minlength="4">
+                </div>
+                <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
+                    <button type="button" class="btn btn-outline" style="flex:1;" onclick="document.getElementById('resetModal').style.display='none'">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="flex:1;">Update Credentials</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        function togglePass() {
+            const passInput = document.getElementById('password');
+            const icon = document.getElementById('eyeIcon');
+            if (passInput.type === 'password') {
+                passInput.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                passInput.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+
+        function handleForgotPassword(e) {
+            e.preventDefault();
+            document.getElementById('resetModal').style.display = 'block';
+            document.getElementById('reset-error').style.display = 'none';
+            document.getElementById('reset-success').style.display = 'none';
+            document.getElementById('resetForm').reset();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check if already logged in via session
+            const currentUser = Auth.getCurrentUser();
+            if (currentUser) {
+                redirectBasedOnRole(currentUser.role);
+            }
+
+            // Fill 'Remember me' if saved in local storage
+            if (localStorage.getItem('portal_saved_user')) {
+                document.getElementById('userId').value = localStorage.getItem('portal_saved_user');
+                document.getElementById('rememberMe').checked = true;
+            }
+
+            const loginForm = document.getElementById('loginForm');
+            const errorMsg = document.getElementById('login-error');
+
+            loginForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const id = document.getElementById('userId').value.trim();
+                const pass = document.getElementById('password').value.trim();
+                const role = document.getElementById('roleSelect').value;
+                const dept = document.getElementById('deptSelectLogin').value;
+                const rememberMe = document.getElementById('rememberMe').checked;
+
+                const user = Auth.login(id, pass, role, dept);
+                if (user) {
+                    if (rememberMe) {
+                        localStorage.setItem('portal_saved_user', id);
+                    } else {
+                        localStorage.removeItem('portal_saved_user');
+                    }
+                    redirectBasedOnRole(user.role);
+                } else {
+                    errorMsg.innerHTML = '<i class="fas fa-exclamation-circle"></i> Faculty ID or password is incorrect.';
+                    errorMsg.style.display = 'block';
+                }
+            });
+
+            // Password Reset Logic
+            document.getElementById('resetForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const tId = document.getElementById('resetTargetId').value.trim();
+                const nPass = document.getElementById('resetNewPass').value;
+                const cPass = document.getElementById('resetConfirmPass').value;
+                const rErr = document.getElementById('reset-error');
+                const rSuc = document.getElementById('reset-success');
+
+                rErr.style.display = 'none';
+                rSuc.style.display = 'none';
+
+                if (nPass !== cPass) {
+                    rErr.textContent = "Passwords do not match!";
+                    rErr.style.display = 'block';
+                    return;
+                }
+
+                if (Auth && typeof Auth.resetPassword === 'function') {
+                    const success = Auth.resetPassword(tId, nPass);
+                    if (success) {
+                        rSuc.style.display = 'block';
+                        document.getElementById('resetForm').reset();
+                        setTimeout(() => {
+                            document.getElementById('resetModal').style.display = 'none';
+                        }, 2000);
+                    } else {
+                        rErr.textContent = "Error: Invalid ID. User not found in database.";
+                        rErr.style.display = 'block';
+                    }
+                } else {
+                    rErr.textContent = "Database connection error.";
+                    rErr.style.display = 'block';
+                }
+            });
+
+            function redirectBasedOnRole(role) {
+                if (role === 'admin') window.location.href = 'admin.html';
+                else if (role === 'staff' || role === 'student') window.location.href = 'staff.html';
+                else if (role === 'technician') window.location.href = 'technician.html';
+            }
+        });
+    </script>
+</body>
+
+</html>
