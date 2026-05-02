@@ -219,7 +219,7 @@
             const loginForm = document.getElementById('loginForm');
             const errorMsg = document.getElementById('login-error');
 
-            loginForm.addEventListener('submit', async (e) => {
+            loginForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 const id = document.getElementById('userId').value.trim();
                 const pass = document.getElementById('password').value.trim();
@@ -227,28 +227,22 @@
                 const dept = document.getElementById('deptSelectLogin').value;
                 const rememberMe = document.getElementById('rememberMe').checked;
 
-                console.log('Login attempt:', { id, role, dept });
-                const user = await Auth.login(id, pass, role, dept);
-                console.log('Auth.login returned:', user);
-
+                const user = Auth.login(id, pass, role, dept);
                 if (user) {
-                    console.log('Login successful, user role:', user.role);
                     if (rememberMe) {
                         localStorage.setItem('portal_saved_user', id);
                     } else {
                         localStorage.removeItem('portal_saved_user');
                     }
-                    console.log('Redirecting to:', user.role);
                     redirectBasedOnRole(user.role);
                 } else {
-                    console.log('Login failed, showing error');
                     errorMsg.innerHTML = '<i class="fas fa-exclamation-circle"></i> Faculty ID or password is incorrect.';
                     errorMsg.style.display = 'block';
                 }
             });
 
             // Password Reset Logic
-            document.getElementById('resetForm').addEventListener('submit', async (e) => {
+            document.getElementById('resetForm').addEventListener('submit', (e) => {
                 e.preventDefault();
                 const tId = document.getElementById('resetTargetId').value.trim();
                 const nPass = document.getElementById('resetNewPass').value;
@@ -266,7 +260,7 @@
                 }
 
                 if (Auth && typeof Auth.resetPassword === 'function') {
-                    const success = await Auth.resetPassword(tId, nPass);
+                    const success = Auth.resetPassword(tId, nPass);
                     if (success) {
                         rSuc.style.display = 'block';
                         document.getElementById('resetForm').reset();
