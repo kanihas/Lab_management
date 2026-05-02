@@ -227,15 +227,21 @@
                 const dept = document.getElementById('deptSelectLogin').value;
                 const rememberMe = document.getElementById('rememberMe').checked;
 
+                console.log('Login attempt:', { id, role, dept });
                 const user = await Auth.login(id, pass, role, dept);
+                console.log('Auth.login returned:', user);
+
                 if (user) {
+                    console.log('Login successful, user role:', user.role);
                     if (rememberMe) {
                         localStorage.setItem('portal_saved_user', id);
                     } else {
                         localStorage.removeItem('portal_saved_user');
                     }
+                    console.log('Redirecting to:', user.role);
                     redirectBasedOnRole(user.role);
                 } else {
+                    console.log('Login failed, showing error');
                     errorMsg.innerHTML = '<i class="fas fa-exclamation-circle"></i> Faculty ID or password is incorrect.';
                     errorMsg.style.display = 'block';
                 }
