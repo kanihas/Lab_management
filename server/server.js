@@ -17,9 +17,19 @@ import systemsRoutes from './routes/systems.js';
 import stockRequestsRoutes from './routes/stock-requests.js';
 import noticesRoutes from './routes/notices.js';
 import auditRoutes from './routes/audit.js';
+import setupRoutes from './routes/setup.js';
 
 // Load environment variables
 dotenv.config();
+
+// Ensure required environment variables are present to avoid confusing runtime errors
+const requiredEnvs = ['JWT_SECRET'];
+for (const name of requiredEnvs) {
+  if (!process.env[name]) {
+    console.error(`❌ Required environment variable ${name} is not defined. Set it in your environment (Render dashboard or .env).`);
+    process.exit(1);
+  }
+}
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -46,6 +56,7 @@ app.use('/api/systems', systemsRoutes);
 app.use('/api/stock-requests', stockRequestsRoutes);
 app.use('/api/notices', noticesRoutes);
 app.use('/api/audit-logs', auditRoutes);
+app.use('/api/setup', setupRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
