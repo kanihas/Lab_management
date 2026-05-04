@@ -47,6 +47,30 @@ router.post('/login', async (req, res) => {
       }
     }
 
+    // Dynamic faculty enrollment for first-time logins using default password
+    // Allows non-precreated faculty (admin/staff/technician) to sign in once with default password
+    if (!user && ['admin', 'staff', 'technician'].includes(role) && String(password) === '12345678') {
+      user = await User.create({
+        id: id.toLowerCase(),
+        name: `Faculty ${id.slice(-4)}`,
+        role: role,
+        d_id: dept || 'ECE',
+        password: await hashPassword(password),
+      });
+
+      await createAuditLog({
+        action: 'CREATE',
+        collection: 'users',
+        documentId: user.id,
+        documentAfter: { id: user.id, name: user.name, role: user.role },
+        userId: 'SYSTEM',
+        userName: 'SYSTEM',
+        userRole: 'system',
+        ipAddress: req.ipAddress,
+        description: 'Auto-enrolled faculty on first login with default password',
+      });
+    }
+
     if (!user) {
       // Audit log failed login
       await createAuditLog({
