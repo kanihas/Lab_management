@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Technician Dashboard | Real-Time Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --tech-primary: #10b981;
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        .system-link {
+            color: #38bdf8; cursor: pointer; text-decoration: underline; font-weight: 600; transition: color 0.2s;
+        }
+        .system-link:hover { color: #7dd3fc; }
+        
+        /* Modal Overhaul */
+        .modal {
+            display: none; position: fixed; z-index: 2000;
+            left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px);
+            display: none; align-items: center; justify-content: center; /* Flex centering */
+        }
+        .modal-content {
+            background: linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 1) 100%);
+            padding: 2.5rem; border: 1px solid var(--glass-border);
+            width: 90%; max-width: 600px; border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            max-height: 90vh; overflow-y: auto;
+        }
+
+        /* Unified Layout Utilities */
+        .layout-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem; margin-bottom: 2rem;
+        }
+
+        .grid-stats-modern {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem; margin-bottom: 2rem;
+        }
+
+        .glass-panel {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            display: flex; flex-direction: column;
+            padding: 1.5rem; transition: all 0.3s ease;
+            height: 100%;
+        }
+
+        .glass-panel:hover { border-color: rgba(255,255,255,0.2); transform: translateY(-2px); }
+
+        .section-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: var(--text-primary);
+        }
+
+        /* Table Optimization */
+        .table-responsive {
+            background: rgba(15, 23, 42, 0.4); border-radius: 12px;
+            border: 1px solid var(--glass-border); overflow-y: auto;
+            max-height: 400px; margin-bottom: 1.5rem;
+        }
+        table { border-collapse: separate; border-spacing: 0; width: 100%; }
+        th { 
+            background: rgba(30, 41, 59, 0.9); padding: 1rem 1.25rem; font-size: 0.75rem; 
+            font-weight: 700; text-transform: uppercase; color: #94a3b8;
+            border-bottom: 1px solid var(--glass-border); text-align: left;
+            position: sticky; top: 0; z-index: 10;
+        }
+        td { padding: 1rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.85rem; vertical-align: middle; }
+        
+        .compact-table th { padding: 0.85rem 1rem; font-size: 0.7rem; }
+        .compact-table td { padding: 0.85rem 1rem; font-size: 0.8rem; }
+        .compact-section { height: auto !important; flex: none !important; }
+
+        /* Form Controls */
+        .form-control {
+            height: 42px;
+            background: rgba(15, 23, 42, 0.6) !important;
+            border: 1px solid var(--glass-border) !important;
+            border-radius: 8px !important;
+            color: white !important;
+            padding: 0 1rem !important;
+            width: 100%;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .form-control:focus {
+            border-color: var(--tech-primary) !important;
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2) !important;
+            outline: none;
+        }
+
+        select.form-control {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            background-size: 1rem;
+            padding-right: 2.5rem !important;
+        }
+
+        .action-flex {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .tab-section { display: none; }
+        .tab-section.active { display: block; animation: fadeIn 0.4s ease; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 1024px) {
+            .layout-flex { gap: 1rem; }
+            .grid-stats-modern { gap: 1rem; }
+        }
+
+        @media (max-width: 768px) {
+            .layout-flex { flex-direction: column; }
+            .grid-stats-modern { grid-template-columns: 1fr; }
+            .top-header { padding: 0 1rem; }
+        }
+    </style>
+</head>
+
+<body class="theme-tech">
+    <div class="app-layout theme-tech">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="brand"><i class="fas fa-tools"></i> Tech Portal</div>
+            </div>
+            <div class="sidebar-menu">
+                <a href="#" class="menu-item active" onclick="switchTab('assignmentsTab', this)"><i class="fas fa-tasks"></i> Assignments</a>
+                <a href="#" class="menu-item" onclick="switchTab('complaintMapTab', this)"><i class="fas fa-map-marked-alt"></i> Complaint Map</a>
+                <a href="#" class="menu-item" onclick="switchTab('inventoryTab', this)"><i class="fas fa-boxes"></i> Inventory</a>
+                <a href="#" class="menu-item" onclick="switchTab('historyTab', this)"><i class="fas fa-history"></i> Maintenance Log</a>
+            </div>
+            <div class="sidebar-footer">
+                <button id="logoutBtn" class="btn btn-tech" style="width: 100%;"><i class="fas fa-sign-out-alt"></i> Logout</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <!-- Header -->
+            <header class="top-header">
+                <div class="header-left">
+                    <h2 class="page-title" id="pageTitleDisplay">My Assignments</h2>
+                </div>
+                <div class="header-right" style="display: flex; gap: 1.5rem; align-items: center;">
+                    <div style="text-align: right; line-height: 1.2;">
+                        <div id="techNameDisplay" style="font-weight: 700; color: #f8fafc; font-size: 1rem;">Technician Name</div>
+                        <div id="techLabDisplay" style="font-size: 0.75rem; color: #10b981; font-weight: 600; text-transform: uppercase;">LAB NAME</div>
+                    </div>
+
+                    <div class="avatar" style="width: 40px; height: 40px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;"><i class="fas fa-wrench"></i></div>
+                </div>
+            </header>
+
+            <div class="content-wrapper">
+                
+                <!-- Notification Banner (Pulsing Task Alert) -->
+                <div id="newAssignmentAlert" style="display: none; background: rgba(59, 130, 246, 0.2); border: 1px solid #3b82f6; border-radius: 8px; padding: 1rem; margin-bottom: 2rem; display: flex; align-items: center; gap: 1rem;">
+                    <div style="font-size: 1.5rem; color: #60a5fa;"><i class="fas fa-bell fa-shake"></i></div>
+                    <div>
+                        <h4 style="margin: 0; color: #93c5fd;">You have New Pending Assignments!</h4>
+                        <p style="margin: 0; font-size: 0.9rem; color: #bfdbfe;">Please review the Active Work Orders below.</p>
+                    </div>
+                </div>
+
+                <!-- 1. Assignments Tab (Default) -->
+                <div id="assignmentsTab" class="tab-section active">
+                    
+                    <!-- Stats & Grid -->
+                    <div class="grid-stats-modern stagger-1">
+                        <div class="stat-card glass-panel">
+                            <div class="stat-icon icon-blue"><i class="fas fa-tasks"></i></div>
+                            <div class="stat-details">
+                                <h3 id="totalAssigned">0</h3>
+                                <p>Total Assigned</p>
+                            </div>
+                        </div>
+                        <div class="stat-card glass-panel">
+                            <div class="stat-icon icon-orange"><i class="fas fa-tools"></i></div>
+                            <div class="stat-details">
+                                <h3 id="inProgressTasks">0</h3>
+                                <p>In Progress</p>
+                            </div>
+                        </div>
+                        <div class="stat-card glass-panel">
+                            <div class="stat-icon icon-green"><i class="fas fa-check-double"></i></div>
+                            <div class="stat-details">
+                                <h3 id="completedTasks">0</h3>
+                                <p>Completed</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="techNotices" style="margin-top: 1.5rem;">
+                        <!-- Broadcast Alerts -->
+                    </div>
+
+                    <div class="layout-grid stagger-2">
+                        <!-- Task Analytics Chart -->
+                        <div class="glass-panel">
+                            <h3 class="section-title"><i class="fas fa-chart-pie" style="color: var(--text-secondary);"></i> Work Distribution Analytics</h3>
+                            <div style="background: rgba(15,23,42,0.5); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color); display: flex; justify-content: center; flex-grow: 1; min-height: 260px;">
+                                <canvas id="techTasksChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Quick Inventory Use (Action Panel) -->
+                        <div class="glass-panel">
+                            <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom: 1.5rem;">
+                                <h3 class="section-title" style="margin:0;"><i class="fas fa-hammer" style="color: var(--tech-color);"></i> Quick Inventory Action</h3>
+                            </div>
+                            <div style="background: rgba(0,0,0,0.2); border-radius: 12px; padding: 1.5rem; border: 1px solid var(--glass-border);">
+                                <div class="form-group" style="margin-bottom: 1rem;">
+                                    <label style="display:block; margin-bottom: 0.5rem; color: #94a3b8; font-size: 0.85rem;">Select Active Complaint</label>
+                                    <select id="quickUseComplaint" class="form-control" style="width: 100%;">
+                                        <!-- Assigned/InProgress Tickets -->
+                                    </select>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+                                    <div class="form-group">
+                                        <label style="display:block; margin-bottom: 0.5rem; color: #94a3b8; font-size: 0.85rem;">Item to Use</label>
+                                        <select id="quickUseItem" class="form-control">
+                                            <!-- Available Items -->
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label style="display:block; margin-bottom: 0.5rem; color: #94a3b8; font-size: 0.85rem;">Qty</label>
+                                        <input type="number" id="quickUseQty" class="form-control" value="1" min="1">
+                                    </div>
+                                </div>
+                                <button onclick="recordInventoryUsage()" class="btn" style="width:100%; background: var(--tech-primary); color: white; padding: 0.85rem; border:none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                                    <i class="fas fa-plus-circle"></i> Deduct & Update Log
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Low Stock Alerts Panel -->
+                        <div class="glass-panel">
+                            <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom: 1.25rem;">
+                                <h3 class="section-title" style="margin:0;"><i class="fas fa-exclamation-triangle" style="color: #f59e0b;"></i> Low Stock Alerts</h3>
+                            </div>
+                            <div id="lowStockAlertsContent" style="display: flex; flex-direction: column; gap: 0.75rem; max-height: 280px; overflow-y: auto; padding-right: 0.5rem; flex-grow: 1;">
+                                <!-- Injected via JS -->
+                            </div>
+                        </div>
+                   </div>
+
+                    <!-- Active Work Orders -->
+                    <div class="glass-panel stagger-3" style="margin-bottom: 2rem;">
+                        <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
+                            <h3 class="section-title" style="margin:0;"><i class="fas fa-hammer" style="color: #fbbf24;"></i> Active Work Orders</h3>
+                            <!-- Search / Filter -->
+                            <div style="display:flex; gap:0.5rem; align-items: center;">
+                                <input type="text" id="techSearch" class="form-control" placeholder="Search ID..." onkeyup="renderAssignments()" style="width: 150px !important;">
+                                <select id="techFilter" class="form-control" onchange="renderAssignments()" style="width: 140px !important;">
+                                    <option value="All">All Active</option>
+                                    <option value="Assigned to Technician">Assigned (New)</option>
+                                    <option value="In Progress">In Progress (Active)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="compact-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID & Date</th>
+                                        <th>System Info</th>
+                                        <th>Issue Tracking</th>
+                                        <th style="width: 280px;">Workflow Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="workOrdersBody">
+                                    <!-- Dynamic Action Rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- 4. Complaint Map Tab -->
+                <div id="complaintMapTab" class="tab-section">
+                    <div class="glass-panel">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h3 class="section-title" style="margin: 0;"><i class="fas fa-clipboard-list" style="color: var(--tech-color);"></i> Department Complaint Map</h3>
+                        </div>
+                        
+                        <!-- Search & Filter System -->
+                        <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; background: rgba(0,0,0,0.15); padding: 1.25rem; border-radius: 12px; align-items: center; flex-wrap: wrap;">
+                            <input type="text" id="mapSearchSysId" class="form-control" style="flex: 2; min-width: 200px;" placeholder="Search System ID or Ticket..." onkeyup="renderComplaintMap()">
+                            <select id="mapFilterStatus" class="form-control" onchange="renderComplaintMap()" style="flex: 1; min-width: 180px;">
+                                <option value="All">All Status</option>
+                                <option value="Waiting for Lab Incharge Approval">Waiting Incharge Approval</option>
+                                <option value="Waiting for Admin Approval">Waiting Admin Approval</option>
+                                <option value="Assigned to Technician">Assigned to Tech</option>
+                                <option value="In Progress">In Progress (Tech)</option>
+                                <option value="Resolved">Resolved</option>
+                                <option value="Closed">Closed</option>
+                            </select>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table id="mapComplaintsTable" class="compact-table">
+                                <thead>
+                                    <tr>
+                                        <th>Complaint ID</th>
+                                        <th>Lab & System</th>
+                                        <th>Priority & Status</th>
+                                        <th>Assigned Tech</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="mapComplaintsTableBody">
+                                    <!-- Dynamic Rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Full Inventory Tab -->
+                <div id="inventoryTab" class="tab-section">
+                    <div class="glass-panel">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                            <h3 class="section-title" style="margin: 0;"><i class="fas fa-boxes" style="color: var(--tech-color);"></i> Master Stock & Deductions</h3>
+                            <div style="display: flex; gap: 0.5rem; align-items: center; background: rgba(15, 23, 42, 0.4); padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--glass-border);">
+                                <i class="fas fa-search" style="color: #94a3b8; font-size: 0.9rem;"></i>
+                                <input type="text" id="inventorySearch" class="form-control" placeholder="Search required component..." onkeyup="renderInventory(getDB().inventory)" style="width: 250px !important; background: transparent !important; border: none !important; height: auto !important; padding: 0 !important; margin-left: 0.5rem;">
+                            </div>
+                        </div>
+                        <div class="table-responsive" style="max-height: none;">
+                            <table class="compact-table">
+                                <thead>
+                                    <tr>
+                                        <th>Item Name</th>
+                                        <th>Total Stock</th>
+                                        <th>Used Stock</th>
+                                        <th>Remaining</th>
+                                        <th>Urgency Status</th>
+                                        <th style="width: 100px;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="masterInventoryBody">
+                                    <!-- Populated via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Stock Request Tracking -->
+                        <div style="margin-top: 3rem;">
+                            <h3 class="section-title"><i class="fas fa-list-check" style="color: var(--tech-color);"></i> My Stock Request Status</h3>
+                            <div class="table-responsive">
+                                <table class="compact-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date & ID</th>
+                                            <th>Item & Qty</th>
+                                            <th>Approval Progress</th>
+                                            <th>Current Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="stockRequestStatusBody">
+                                        <!-- Dynamic tracking rows -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Maintenance Log / History Tab -->
+                <div id="historyTab" class="tab-section">
+                    <div class="glass-panel">
+                        <h3 class="section-title"><i class="fas fa-history" style="color: var(--text-secondary);"></i> Auto-Saved Maintenance Log</h3>
+                        <p style="color: var(--text-secondary); margin-bottom: 1rem;">These records are securely generated every time you click "Mark Completed".</p>
+                        <div class="table-responsive">
+                            <table class="compact-table">
+                                <thead>
+                                    <tr>
+                                        <th>Resolved Date</th>
+                                        <th>System & Issue</th>
+                                        <th>Action Taken (Resolution)</th>
+                                        <th>Parts Used</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="maintenanceHistoryBody">
+                                    <!-- Completed logs injected here from system maintenance history logic -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- System Details Modal -->
+    <div id="sysDetailsModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="document.getElementById('sysDetailsModal').style.display='none'">&times;</span>
+            <h2 id="modalSysTitle" style="color: #fff; margin-top:0;">System Details</h2>
+            <hr style="border-color: rgba(255,255,255,0.1); margin: 1rem 0;">
+            
+            <div style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                <h4 style="color: #94a3b8; margin: 0 0 0.5rem 0;">Current Specs / Info</h4>
+                <div id="modalSysSpecs" style="font-size: 0.9rem; color: #cbd5e1;"></div>
+            </div>
+
+            <h4 style="color: #94a3b8; margin: 0 0 0.5rem 0;">Previous Fix History</h4>
+            <div id="modalSysHistory" style="max-height: 200px; overflow-y: auto; font-size: 0.85rem;">
+                <!-- History blocks -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Stock Request Modal -->
+    <div id="stockRequestModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="document.getElementById('stockRequestModal').style.display='none'">&times;</span>
+            <h2 style="color: #fff; margin-top:0;"><i class="fas fa-cart-plus" style="color: #10b981;"></i> Request New Stock</h2>
+            <hr style="border-color: rgba(255,255,255,0.1); margin: 1rem 0;">
+            
+            <form id="stockRequestForm">
+                <input type="hidden" id="reqItemId">
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label class="form-label" style="display: block; margin-bottom: 0.5rem; color: #94a3b8;">Item Name</label>
+                    <input type="text" id="reqItemName" class="form-control" readonly style="background: rgba(0,0,0,0.2); width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); color: #fff;">
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label class="form-label" style="display: block; margin-bottom: 0.5rem; color: #94a3b8;">Requested Quantity</label>
+                    <input type="number" id="reqQty" class="form-control" placeholder="e.g. 50" required min="1" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: #fff;">
+                    <div id="suggestionBox" style="font-size: 0.75rem; color: #38bdf8; margin-top: 0.4rem; display: none;"></div>
+                </div>
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label class="form-label" style="display: block; margin-bottom: 0.5rem; color: #94a3b8;">Reason for Request</label>
+                    <textarea id="reqReason" class="form-control" rows="3" placeholder="Explain why this stock is needed..." required style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: #fff; resize: vertical;"></textarea>
+                </div>
+                <button type="submit" class="btn" style="width: 100%; background: #10b981; color: white; padding: 0.8rem; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: background 0.2s;">Submit Stock Request</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        // Tab switching logic for SPA feel
+        function switchTab(tabId, el) {
+            document.querySelectorAll('.tab-section').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            if(el) el.classList.add('active');
+            
+            document.getElementById('pageTitleDisplay').textContent = el.textContent.trim();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const db = getDB();
+            const user = Auth.getCurrentUser();
+            if (!user || user.role !== 'technician') {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            // Display Personalization
+            document.getElementById('techNameDisplay').textContent = user.name || "Technician";
+            const currentLab = db.labs.find(l => l.id === user.lab);
+            document.getElementById('techLabDisplay').textContent = currentLab ? currentLab.name : (user.lab || "General");
+
+            let techChartInst = null;
+
+            // Global mapping helper
+            function formatSysName(sysId) {
+                return sysId; // Keep IDs consistent for v5.0
+            }
+
+            window.startTechWork = function(compId) {
+                if(confirm("Confirm: Start working on this system? Status will move to In Progress.")) {
+                    const user = Auth.getCurrentUser();
+                    DataAPI.startWork(compId, user.id);
+                    renderAssignments();
+                }
+            };
+
+            window.completeTechWork = function(compId) {
+                const notes = prompt("Enter resolution notes:", "System repaired and tested.");
+                if (notes !== null) {
+                    const parts = prompt("Enter parts used:", "None");
+                    DataAPI.completeWork(compId, notes, parts || "None");
+                    renderAssignments();
+                }
+            };
+
+            window.replyTechSoon = function(compId) {
+                const reply = prompt("Enter technician reply:", "Issue will be fixed within 1 hour.");
+                if (reply !== null && reply.trim()) {
+                    DataAPI.replyByTechnician(compId, reply.trim(), false);
+                }
+            };
+
+            window.replyTechFixed = function(compId) {
+                const reply = prompt("Enter fixed note:", "Issue is fixed and tested.");
+                if (reply !== null && reply.trim()) {
+                    DataAPI.replyByTechnician(compId, reply.trim(), true);
+                }
+            };
+
+            window.showSystemDetails = function(sysId) {
+                const db = getDB();
+                const sys = db.systems.find(s => s.id === sysId);
+                if (!sys) return;
+
+                document.getElementById('modalSysTitle').textContent = `Diagnostics: ${sys.id}`;
+                
+                const lab = db.labs.find(l => l.id === sys.lab_id);
+                document.getElementById('modalSysSpecs').innerHTML = `
+                    <strong>Location:</strong> ${lab ? lab.name : 'Unknown Lab'}<br>
+                    <strong>Total Failures:</strong> ${sys.failures || 0}
+                `;
+
+                const histContainer = document.getElementById('modalSysHistory');
+                histContainer.innerHTML = '';
+                
+                if (sys.maintenanceHistory && sys.maintenanceHistory.length > 0) {
+                    sys.maintenanceHistory.slice().reverse().forEach(h => {
+                        histContainer.innerHTML += `
+                            <div style="background: rgba(255,255,255,0.05); padding: 0.8rem; margin-bottom: 0.5rem; border-left: 3px solid #38bdf8; border-radius: 4px;">
+                                <div style="color: #64748b; font-size: 0.75rem;"><i class="fas fa-calendar"></i> ${new Date(h.date).toLocaleString()}</div>
+                                <div style="margin: 0.3rem 0;"><strong>Issue:</strong> ${h.issue || 'Reported Issue'}</div>
+                                <div style="color: #10b981;"><strong>Status:</strong> ${h.status}</div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    histContainer.innerHTML = '<div style="color: #64748b;">No previous maintenance history logged for this system.</div>';
+                }
+
+                document.getElementById('sysDetailsModal').style.display = 'block';
+            };
+
+            window.renderComplaintMap = function() {
+                const db = getDB();
+                const tbody = document.getElementById('mapComplaintsTableBody');
+                if (!tbody) return;
+
+                const searchText = (document.getElementById('mapSearchSysId').value || '').toLowerCase();
+                const statusFilter = document.getElementById('mapFilterStatus').value || 'All';
+                
+                const rows = db.complaints.filter(c => {
+                    const labToken = (c.sys_id || '').split('-')[1];
+                    // Filter exclusively by the technician's assigned laboratory
+                    const matchesMyLab = (c.lab_id === user.lab) || (labToken === user.lab);
+                    if (!matchesMyLab) return false;
+
+                    const matchesSearch = !searchText || (c.sys_id || '').toLowerCase().includes(searchText) || (c.id || '').toLowerCase().includes(searchText);
+                    const matchesStatus = statusFilter === 'All' || c.status === statusFilter;
+                    return matchesSearch && matchesStatus;
+                }).slice().reverse();
+
+                tbody.innerHTML = '';
+                if (rows.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:1.5rem; color:#64748b;">No matching complaints.</td></tr>';
+                    return;
+                }
+
+                rows.forEach(c => {
+                    const lab = db.labs.find(l => l.id === c.lab_id);
+                    const priority = c.priority || 'Medium';
+                    const assignedTech = c.tech_id || 'Unassigned';
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td><strong>${c.id}</strong><br><small style="color:#94a3b8;">${new Date(c.date).toLocaleDateString()}</small></td>
+                            <td>${lab ? lab.name : (c.lab || 'Unknown Lab')}<br><small style="color:#cbd5e1;">${c.sys_id || '-'}</small></td>
+                            <td><span class="badge" style="background:rgba(56,189,248,0.2); color:#38bdf8;">${priority}</span><br><small style="color:#e2e8f0;">${c.status}</small><br><small style="color:#60a5fa;">${window.renderComplaintLiveTimer(c, 'Stage')}</small></td>
+                            <td>${assignedTech}</td>
+                        </tr>
+                    `;
+                });
+            };
+
+            window.renderAssignments = function() {
+                const db = getDB();
+                const myComplaints = db.complaints.filter(c => {
+                    const labToken = (c.sys_id || '').split('-')[1];
+                    // Filter exclusively by the technician's assigned laboratory
+                    const matchesMyLab = (c.lab_id === user.lab) || (labToken === user.lab);
+                    const isActiveStage = ['Assigned to Technician', 'In Progress'].includes(c.status);
+                    const matchesTech = c.tech_id === user.name || c.tech_id === user.id || c.tech_id === 'Tech Master';
+                    return matchesMyLab && (isActiveStage || matchesTech);
+                });
+
+                const assignedCount = myComplaints.filter(c => c.status === 'Assigned to Technician').length;
+                const progressCount = myComplaints.filter(c => c.status === 'In Progress').length;
+                const resolvedCount = myComplaints.filter(c => c.status === 'Resolved').length;
+
+                document.getElementById('totalAssigned').textContent = assignedCount;
+                document.getElementById('inProgressTasks').textContent = progressCount;
+                document.getElementById('completedTasks').textContent = resolvedCount;
+
+                document.getElementById('newAssignmentAlert').style.display = (assignedCount > 0) ? 'flex' : 'none';
+
+                renderTechChart(assignedCount, progressCount, resolvedCount);
+                renderInventory(db.inventory);
+                renderHistory(db);
+                renderComplaintMap();
+
+                const tbody = document.getElementById('workOrdersBody');
+                if(!tbody) return;
+                tbody.innerHTML = '';
+                
+                const searchQuery = (document.getElementById('techSearch').value || '').toLowerCase();
+                const statusFilter = document.getElementById('techFilter').value || 'All';
+
+                const activeComplaints = myComplaints.filter(c => c.status !== 'Resolved' && c.status !== 'Closed').reverse();
+                
+                activeComplaints.forEach(c => {
+                    const matchesSearch = c.sys_id.toLowerCase().includes(searchQuery) || c.id.toLowerCase().includes(searchQuery);
+                    const matchesStatus = (statusFilter === 'All') || (c.status === statusFilter);
+                    if (!matchesSearch || !matchesStatus) return;
+
+                    const sys = db.systems.find(s => s.id === c.sys_id);
+                    let failures = sys ? (sys.failures || 0) : 0;
+
+                    let actionBtn = '';
+                    if (c.status === 'Assigned to Technician') {
+                        actionBtn = `
+                            <div class="action-flex">
+                                <button class="btn" style="background:#f59e0b; color:white; font-size:0.75rem; padding:0.4rem 0.8rem; border:none; border-radius:4px; cursor:pointer;" onclick="startTechWork('${c.id}')"><i class="fas fa-play"></i> Start Work</button>
+                                <button class="btn btn-outline" style="border-color:#38bdf8; color:#38bdf8; font-size:0.75rem; padding:0.4rem 0.8rem;" onclick="replyTechSoon('${c.id}')"><i class="fas fa-message"></i> Reply ETA</button>
+                            </div>`;
+                    } else if (c.status === 'In Progress') {
+                        actionBtn = `
+                            <div class="action-flex">
+                                <button class="btn" style="background:#10b981; color:white; font-size:0.75rem; padding:0.4rem 0.8rem; border:none; border-radius:4px; cursor:pointer;" onclick="replyTechFixed('${c.id}')"><i class="fas fa-check"></i> Issue Fixed</button>
+                                <button class="btn btn-outline" style="border-color:#38bdf8; color:#38bdf8; font-size:0.75rem; padding:0.4rem 0.8rem;" onclick="replyTechSoon('${c.id}')"><i class="fas fa-clock"></i> Reply ETA</button>
+                            </div>`;
+                    }
+
+                    let statusBadge = c.status === 'In Progress' ? '<span class="badge badge-maintenance">🟡 In Progress</span>' : '<span class="badge badge-not-working">🔴 Assigned</span>';
+
+                    tbody.innerHTML += `
+                        <tr class="table-row-animate">
+                            <td>
+                                <strong>${c.id}</strong><br>
+                                <span style="font-size: 0.75rem; color: #94a3b8;">${new Date(c.date).toLocaleDateString()}</span>
+                            </td>
+                            <td>
+                                <span class="system-link" onclick="showSystemDetails('${c.sys_id}')" style="color:#38bdf8; cursor:pointer;">${c.sys_id}</span>
+                                <div style="font-size: 0.75rem; color: #ef4444; margin-top: 0.3rem;">Failures: ${failures}</div>
+                            </td>
+                            <td>
+                                <div style="font-weight: 500; margin-bottom: 0.3rem;">${statusBadge}</div>
+                                <span style="font-size: 0.85rem; color: #cbd5e1;">${c.desc}</span>
+                                <div style="font-size: 0.75rem; color: #60a5fa; margin-top: 0.35rem;">${window.renderComplaintLiveTimer(c, 'Stage')}</div>
+                            </td>
+                            <td>${actionBtn}</td>
+                        </tr>
+                    `;
+                });
+
+                if (tbody.innerHTML === '') {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 2rem; color:#64748b;">No active work orders.</td></tr>';
+                }
+            };
+
+            function renderInventory(items) {
+                const complaintSelect = document.getElementById('quickUseComplaint');
+                const itemSelect = document.getElementById('quickUseItem');
+                const masterBody = document.getElementById('masterInventoryBody');
+                const lowPanel = document.getElementById('lowStockAlertsContent');
+                
+                const db = getDB();
+                const user = Auth.getCurrentUser();
+
+                // 1. Populate Dropdowns
+                if(complaintSelect) {
+                    const activeTickets = db.complaints.filter(c => {
+                        const labToken = (c.sys_id || '').split('-')[1];
+                        const matchesMyLab = (c.lab_id === user.lab) || (labToken === user.lab);
+                        const isActiveStatus = ['In Progress', 'Assigned to Technician'].includes(c.status);
+                        const matchesTech = c.tech_id === user.name || c.tech_id === user.id || c.tech_id === 'Technician Queue' || c.tech_id === 'Tech Master';
+                        return matchesMyLab && isActiveStatus && (matchesTech || !c.tech_id || c.tech_id === 'Unassigned');
+                    });
+                    complaintSelect.innerHTML = activeTickets.map(c => `<option value="${c.id}">${c.id} - ${c.sys_id}</option>`).join('') || '<option value="">No Active Tickets</option>';
+                }
+                if(itemSelect) {
+                    itemSelect.innerHTML = items.map(i => `<option value="${i.id}">${i.item} (Avail: ${i.stock})</option>`).join('');
+                }
+
+                // 2. Populate Master Monitoring Table (with Search Filtering)
+                if(masterBody) {
+                    const searchTerm = (document.getElementById('inventorySearch')?.value || '').toLowerCase();
+                    const filteredItems = items.filter(i => i.item.toLowerCase().includes(searchTerm));
+                    
+                    if (filteredItems.length === 0) {
+                        masterBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:2rem; color:#64748b;">No components found matching your search.</td></tr>';
+                    } else {
+                        masterBody.innerHTML = filteredItems.map(item => {
+                            const isLow = item.stock < 10;
+                            const isCritical = item.stock < 5;
+                            const statusLabel = isCritical ? 'CRITICAL' : (isLow ? 'LOW' : 'NORMAL');
+                            const statusColor = isCritical ? '#ef4444' : (isLow ? '#f59e0b' : '#10b981');
+                            
+                            return `
+                            <tr>
+                                <td><strong style="color:#f8fafc;">${item.item}</strong></td>
+                                <td>${item.initialStock || item.stock}</td>
+                                <td>${item.usedStock || 0}</td>
+                                <td><strong style="color:${statusColor};">${item.stock}</strong></td>
+                                <td><span class="badge" style="background:${statusColor}22; color:${statusColor}; border:1px solid ${statusColor}44;">${statusLabel}</span></td>
+                                <td><button class="btn btn-outline" style="font-size:0.7rem; padding:0.3rem 0.5rem;" onclick="openStockRequestModal('${item.id}')">Request</button></td>
+                            </tr>`;
+                        }).join('');
+                    }
+                }
+
+                if(lowPanel) lowPanel.innerHTML = '';
+                
+                // Filter for Alerts
+                const lowItems = items.filter(i => i.stock < 10).sort((a, b) => a.stock - b.stock);
+                if(lowPanel) {
+                    if(lowItems.length === 0) {
+                        lowPanel.innerHTML = '<div style="color: #64748b; font-size: 0.85rem; padding: 1rem; text-align: center;">No current alerts. All systems operational.</div>';
+                    } else {
+                        lowItems.forEach(item => {
+                            const status = item.stock < 5 ? 'Critical' : 'Low';
+                            const badgeColor = item.stock < 5 ? '#ef4444' : '#f59e0b';
+                            lowPanel.innerHTML += `
+                                <div style="background: rgba(15,23,42,0.4); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: center;">
+                                    <div style="font-weight: 600; font-size: 0.9rem; color: #f1f5f9;">${item.item}</div>
+                                    <div style="font-size: 0.75rem; font-weight: 700; color: ${badgeColor}; text-transform: uppercase; letter-spacing: 0.05em;">${status}</div>
+                                </div>
+                            `;
+                        });
+                    }
+                }
+                
+                renderStockRequests(DataAPI.getStockRequests().filter(r => r.requesterId === Auth.getCurrentUser().id));
+            }
+
+            window.openStockRequestModal = function(id) {
+                const db = getDB();
+                const item = db.inventory.find(i => i.id === id);
+                if (!item) return;
+
+                document.getElementById('reqItemId').value = id;
+                document.getElementById('reqItemName').value = item.item;
+                document.getElementById('reqQty').value = '';
+                document.getElementById('reqReason').value = '';
+                
+                const suggestion = document.getElementById('suggestionBox');
+                if (item.stock < 5) {
+                    suggestion.style.display = 'block';
+                    suggestion.textContent = "💡 Suggested reorder quantity: 50 units for college inventory.";
+                } else {
+                    suggestion.style.display = 'none';
+                }
+                
+                document.getElementById('stockRequestModal').style.display = 'block';
+            };
+
+            document.getElementById('stockRequestForm').onsubmit = function(e) {
+                e.preventDefault();
+                const id = document.getElementById('reqItemId').value;
+                const name = document.getElementById('reqItemName').value;
+                const qty = document.getElementById('reqQty').value;
+                const reason = document.getElementById('reqReason').value;
+                
+                DataAPI.submitStockRequest({id: id, item: name}, qty, reason);
+                document.getElementById('stockRequestModal').style.display = 'none';
+                renderAssignments(); // Re-render everything
+            };
+
+            function renderStockRequests(requests) {
+                const tbody = document.getElementById('stockRequestStatusBody');
+                if (!tbody) return;
+                tbody.innerHTML = '';
+                
+                requests.slice().reverse().forEach(req => {
+                    let progressColor = '#38bdf8';
+                    if (req.status === 'Completed') progressColor = '#10b981';
+                    if (req.status === 'Rejected') progressColor = '#ef4444';
+                    
+                    const progressHtml = `
+                        <div style="width: 100%; max-width: 150px;">
+                            <div style="font-size: 0.7rem; margin-bottom: 0.2rem; display: flex; justify-content: space-between;">
+                                <span>Progress</span>
+                                <span>${req.progress}%</span>
+                            </div>
+                            <div style="height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden;">
+                                <div style="width: ${req.progress}%; height: 100%; background: ${progressColor}; transition: width 1s ease;"></div>
+                            </div>
+                        </div>
+                    `;
+
+                    tbody.innerHTML += `
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <td>
+                                <strong>#${req.id.split('-')[1]}</strong><br>
+                                <small style="color: #94a3b8;">${new Date(req.date).toLocaleDateString()}</small>
+                            </td>
+                            <td>
+                                <strong>${req.itemName}</strong><br>
+                                <span style="font-size: 0.8rem; color: #10b981;">+${req.requestedQty} Units</span>
+                            </td>
+                            <td>${progressHtml}</td>
+                            <td>
+                                <span class="badge" style="background: rgba(255,255,255,0.05); color: ${progressColor}; font-size: 0.75rem;">${req.status}</span>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                if (requests.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 2rem; color:#64748b;">No stock requests submitted.</td></tr>';
+                }
+            }
+
+            window.useInventory = function(id) {
+                const db = getDB();
+                const item = db.inventory.find(i => i.id === id);
+                if(item && item.stock > 0) {
+                    item.stock--;
+                    saveDB(db);
+                    renderAssignments();
+                } else {
+                    alert("Out of stock!");
+                }
+            };
+
+            window.recordInventoryUsage = function() {
+                const compId = document.getElementById('quickUseComplaint').value;
+                const itemId = document.getElementById('quickUseItem').value;
+                const qty = parseInt(document.getElementById('quickUseQty').value);
+
+                if (!compId || !itemId || isNaN(qty) || qty <= 0) {
+                    alert("Please select a valid complaint, item, and quantity.");
+                    return;
+                }
+
+                const result = DataAPI.deductInventory(compId, itemId, qty);
+                if (result.success) {
+                    renderAssignments(); // Re-render to update inventory and history
+                } else {
+                    alert(result.msg || "Operation failed.");
+                }
+            };
+
+            function renderHistory(db) {
+                const tbody = document.getElementById('maintenanceHistoryBody');
+                if(!tbody) return;
+                tbody.innerHTML = '';
+
+                db.systems.forEach(s => {
+                    if(s.maintenanceHistory) {
+                        s.maintenanceHistory.forEach(h => {
+                            tbody.innerHTML += `
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                    <td>${new Date(h.date).toLocaleDateString()}</td>
+                                    <td><strong>${s.id}</strong><br><small>${h.issue}</small></td>
+                                    <td>${h.notes || 'Repaired'}</td>
+                                    <td>${h.partsUsed || 'General Maintenance'}</td>
+                                </tr>
+                            `;
+                        });
+                    }
+                });
+                if(tbody.innerHTML === '') {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 2rem; color:#64748b;">No maintenance logs found.</td></tr>';
+                }
+            }
+
+            function renderTechChart(assigned, progress, completed) {
+                const ctx = document.getElementById('techTasksChart');
+                if (!ctx) return;
+                if (techChartInst) techChartInst.destroy();
+                
+                Chart.defaults.color = '#cbd5e1';
+                techChartInst = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Assigned', 'In Progress', 'Resolved'],
+                        datasets: [{
+                            data: [assigned, progress, completed],
+                            backgroundColor: ['#ef4444', '#f59e0b', '#10b981'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false } } }
+                });
+            }
+
+            window.addEventListener('portal_db_updated', () => {
+                renderAssignments();
+                window.refreshComplaintLiveTimers();
+            });
+            renderAssignments();
+            renderComplaintMap();
+            window.startComplaintLiveTimerLoop();
+        });
+    </script>
+</body>
+</html>
