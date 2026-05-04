@@ -221,7 +221,8 @@ function initDB() {
             if (!u.password) u.password = DEFAULT_LOGIN_PASSWORD;
         });
 
-        db.users = db.users.filter(u => isAllowedLoginId(u.id));
+        // Preserve any faculty IDs that were changed by the user.
+        // Student IDs are still validated at login time via the dynamic student pattern.
 
         db.labs = CANONICAL_LABS.map(lab => ({ ...lab }));
         const canonicalSystemIds = new Set(buildSystemsForLabs(db.labs).map(s => s.id));
