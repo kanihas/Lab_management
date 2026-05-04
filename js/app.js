@@ -431,9 +431,133 @@ document.addEventListener('DOMContentLoaded', () => {
     const user = Auth.getCurrentUser();
     if (nameDisp && user) {
         let rName = user.displayRole || user.role;
-        nameDisp.textContent = `${user.name} (${rName.charAt(0).toUpperCase() + rName.slice(1)})`;
+        if (user.role === 'student') {
+            nameDisp.textContent = `${user.id} (${rName.charAt(0).toUpperCase() + rName.slice(1)})`;
+        } else {
+            nameDisp.textContent = `${user.name} (${rName.charAt(0).toUpperCase() + rName.slice(1)})`;
+        }
     }
+
+    // Wire change credentials button (exists on multiple pages)
+    const changeBtns = document.querySelectorAll('#changeCredBtn');
+    changeBtns.forEach(b => b.addEventListener('click', (e) => {
+        openChangeCredentialsModal();
+    }));
 });
+
+// Change Credentials Modal utilities
+function openChangeCredentialsModal() {
+    // create modal if not present
+    if (document.getElementById('changeCredModal')) {
+        document.getElementById('changeCredModal').style.display = 'block';
+        return;
+    }
+
+    const modal = document.createElement('div');
+    modal.id = 'changeCredModal';
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h3 style="margin-top:0;">Change Credentials</h3>
+            <p style="color:#94a3b8; font-size:0.9rem;">Faculty may change their Faculty ID and password. Students may change only password.</p>
+            <form id="changeCredForm">
+                <div class="form-group" id="new-id-row" style="text-align:left; margin-bottom:0.75rem; display:none;">
+                    <label style="font-size:0.85rem; color:#94a3b8; display:block; margin-bottom:0.25rem;">New Faculty ID</label>
+                    <input type="text" id="newFacultyId" class="form-control" placeholder="e.g. 114211">
+                </div>
+                <div class="form-group" style="text-align:left; margin-bottom:0.75rem;">
+                    <label style="font-size:0.85rem; color:#94a3b8; display:block; margin-bottom:0.25rem;">Current Password</label>
+                    <input type="password" id="currentPass" class="form-control" placeholder="Current Password" required>
+                </div>
+                <div class="form-group" style="text-align:left; margin-bottom:0.75rem;">
+                    <label style="font-size:0.85rem; color:#94a3b8; display:block; margin-bottom:0.25rem;">New Password</label>
+                    <input type="password" id="newPass" class="form-control" placeholder="New Password (min 4)" required minlength="4">
+                </div>
+                <div style="display:flex; gap:0.5rem; margin-top:1rem;">
+                    <button type="button" class="btn btn-outline" onclick="document.getElementById('changeCredModal').style.display='none'">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+                <div id="changeCredMsg" style="margin-top:0.75rem; display:none; font-size:0.9rem;"></div>
+            </form>
+        </div>`;
+    document.body.appendChild(modal);
+
+    // Show/hide new ID field depending on role
+    const user = Auth.getCurrentUser();
+    if (user && (user.role === 'admin' || user.role === 'technician' || user.role === 'staff')) {
+        document.getElementById('new-id-row').style.display = 'block';
+    }
+
+    document.getElementById('changeCredForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await handleChangeCredentialsSubmit();
+    });
+
+    modal.style.display = 'block';
+}
+
+async function handleChangeCredentialsSubmit() {
+    const user = Auth.getCurrentUser();
+    if (!user) return window.location.href = 'index.html';
+
+    const newIdEl = document.getElementById('newFacultyId');
+    const currentPass = document.getElementById('currentPass').value;
+    const newPass = document.getElementById('newPass').value;
+    const msgEl = document.getElementById('changeCredMsg');
+
+    // Basic validations
+    if (!currentPass || !newPass) {
+        msgEl.style.display = 'block'; msgEl.style.color = '#ef4444'; msgEl.textContent = 'Please fill required fields.'; return;
+    }
+
+    const db = getDB();
+    const persisted = db.users.find(u => u.id === user.id);
+    if (!persisted) { msgEl.style.display = 'block'; msgEl.style.color = '#ef4444'; msgEl.textContent = 'User not found.'; return; }
+
+    // verify current password
+    const currPassVal = persisted.password || DEFAULT_LOGIN_PASSWORD;
+    if (String(currPassVal) !== String(currentPass)) {
+        msgEl.style.display = 'block'; msgEl.style.color = '#ef4444'; msgEl.textContent = 'Current password is incorrect.'; return;
+    }
+
+    // If student, disallow ID change
+    const wantsIdChange = newIdEl && newIdEl.value && (user.role !== 'student');
+    if (newIdEl && newIdEl.value && user.role === 'student') {
+        msgEl.style.display = 'block'; msgEl.style.color = '#ef4444'; msgEl.textContent = 'Students cannot change Faculty ID.'; return;
+    }
+
+    // If changing ID, ensure uniqueness
+    if (wantsIdChange) {
+        const newId = String(newIdEl.value).toLowerCase();
+        const exists = db.users.find(u => u.id === newId);
+        if (exists) { msgEl.style.display = 'block'; msgEl.style.color = '#ef4444'; msgEl.textContent = 'Provided Faculty ID is already in use.'; return; }
+        persisted.id = newId;
+    }
+
+    // Apply new password
+    persisted.password = newPass;
+
+    saveDB(db);
+
+    // Update session to keep user logged in with new id/password
+    sessionStorage.setItem('currentUser', JSON.stringify(persisted));
+
+    msgEl.style.display = 'block'; msgEl.style.color = '#10b981'; msgEl.textContent = 'Credentials updated successfully.';
+    setTimeout(() => {
+        const modal = document.getElementById('changeCredModal');
+        if (modal) modal.style.display = 'none';
+        // refresh display name
+        const nameDisp = document.getElementById('user-name-display');
+        if (nameDisp) {
+            let rName = persisted.displayRole || persisted.role;
+            if (persisted.role === 'student') {
+                nameDisp.textContent = `${persisted.id} (${rName.charAt(0).toUpperCase() + rName.slice(1)})`;
+            } else {
+                nameDisp.textContent = `${persisted.name} (${rName.charAt(0).toUpperCase() + rName.slice(1)})`;
+            }
+        }
+    }, 900);
+}
 
 // STANDARDIZED DATA API
 const DataAPI = {
