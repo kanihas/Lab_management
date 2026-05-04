@@ -526,7 +526,43 @@ async function handleChangeCredentialsSubmit() {
 
         if (!resp.ok) {
             const err = await resp.json().catch(() => ({}));
-            msgEl.style.display = 'block'; msgEl.style.color = '#ef4444'; msgEl.textContent = err.message || 'Server rejected the change.'; return;
+            // If server doesn't know this user yet (not found), fall back to local update
+            if (resp.status === 404) {
+                console.warn('Server reports user not found, falling back to local update');
+            } else {
+                msgEl.style.display = 'block'; msgEl.style.color = '#ef4444'; msgEl.textContent = err.message || 'Server rejected the change.'; return;
+            }
+        } else {
+            const body = await resp.json();
+            // Update local DB to stay in sync with server
+            const db = getDB();
+            const persisted = db.users.find(u => u.id === user.id) || db.users.find(u => u.name === user.name);
+            if (persisted) {
+                if (body.user && body.user.id) persisted.id = body.user.id;
+                persisted.password = newPass;
+            } else {
+                // create local record if missing
+                db.users.push({ id: body.user.id, name: body.user.name, role: body.user.role, d_id: body.user.d_id, lab: body.user.lab, password: newPass });
+            }
+            saveDB(db);
+
+            // Update session and UI
+            sessionStorage.setItem('currentUser', JSON.stringify({ ...body.user }));
+            msgEl.style.display = 'block'; msgEl.style.color = '#10b981'; msgEl.textContent = 'Credentials updated successfully.';
+            setTimeout(() => {
+                const modal = document.getElementById('changeCredModal');
+                if (modal) modal.style.display = 'none';
+                const nameDisp = document.getElementById('user-name-display');
+                if (nameDisp) {
+                    let rName = (body.user.displayRole || body.user.role) || user.role;
+                    if (body.user.role === 'student') {
+                        nameDisp.textContent = `${body.user.id} (${rName.charAt(0).toUpperCase() + rName.slice(1)})`;
+                    } else {
+                        nameDisp.textContent = `${body.user.name} (${rName.charAt(0).toUpperCase() + rName.slice(1)})`;
+                    }
+                }
+            }, 900);
+            return;
         }
 
         const body = await resp.json();
