@@ -371,6 +371,44 @@ const Auth = {
         const user = sessionStorage.getItem('currentUser');
         return user ? JSON.parse(user) : null;
     },
+    resetPassword: (targetId, newPassword) => {
+        const db = getDB();
+        const normalizedId = String(targetId || '').trim().toLowerCase();
+        const updatedPassword = String(newPassword || '');
+
+        if (!normalizedId || !updatedPassword) {
+            return false;
+        }
+
+        let matched = false;
+        db.users = (db.users || []).map(user => {
+            if (String(user.id || '').toLowerCase() !== normalizedId) {
+                return user;
+            }
+
+            matched = true;
+            return {
+                ...user,
+                password: updatedPassword
+            };
+        });
+
+        if (!matched) {
+            return false;
+        }
+
+        saveDB(db);
+
+        const currentUser = Auth.getCurrentUser();
+        if (currentUser && String(currentUser.id || '').toLowerCase() === normalizedId) {
+            const refreshedUser = db.users.find(user => String(user.id || '').toLowerCase() === normalizedId);
+            if (refreshedUser) {
+                sessionStorage.setItem('currentUser', JSON.stringify(refreshedUser));
+            }
+        }
+
+        return true;
+    },
     requireAuth: (allowedRoles) => {
         const sessionUser = Auth.getCurrentUser();
         if (!sessionUser) {
