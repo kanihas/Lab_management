@@ -215,4 +215,60 @@ router.post('/password-reset', async (req, res) => {
   }
 });
 
+// CHANGE CREDENTIALS (self-service)
+router.post('/change-credentials', async (req, res) => {
+  try {
+    const { currentId, currentPassword, newPassword, newId } = req.body;
+
+    if (!currentId || !currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    }
+
+    const user = await User.findOne({ id: currentId.toLowerCase() });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const valid = await comparePassword(currentPassword, user.password);
+    if (!valid) {
+      await createAuditLog({
+        action: 'READ', collection: 'users', documentId: user.id,
+        userId: user.id, userName: user.name, userRole: user.role,
+        ipAddress: req.ipAddress, description: 'Failed credential-change attempt - invalid current password', status: 'failed'
+      });
+      return res.status(401).json({ success: false, message: 'Current password is incorrect' });
+    }
+
+    const before = { id: user.id, password: user.password };
+
+    // If requested, change ID (ensure uniqueness)
+    if (newId && String(newId).toLowerCase() !== String(user.id)) {
+      const exists = await User.findOne({ id: String(newId).toLowerCase() });
+      if (exists) return res.status(409).json({ success: false, message: 'Requested ID already in use' });
+      user.id = String(newId).toLowerCase();
+    }
+
+    // Update password
+    user.password = await hashPassword(newPassword);
+    user.updatedBy = user.id;
+    await user.save();
+
+    // Audit log
+    await createAuditLog({
+      action: 'UPDATE', collection: 'users', documentId: user.id,
+      documentBefore: before, documentAfter: { id: user.id, password: user.password },
+      userId: user.id, userName: user.name, userRole: user.role, ipAddress: req.ipAddress,
+      description: 'User changed own credentials'
+    });
+
+    // Generate a fresh JWT for the updated identity
+    const token = jwt.sign({ id: user.id, name: user.name, role: user.role, d_id: user.d_id, lab: user.lab }, process.env.JWT_SECRET, { expiresIn: '24h' });
+
+    res.json({ success: true, message: 'Credentials updated', token, user: { id: user.id, name: user.name, role: user.role, d_id: user.d_id, lab: user.lab } });
+  } catch (error) {
+    console.error('Change credentials error:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+});
+
 export default router;

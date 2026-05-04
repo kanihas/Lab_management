@@ -511,23 +511,75 @@ async function handleChangeCredentialsSubmit() {
         msgEl.style.display = 'block'; msgEl.style.color = '#ef4444'; msgEl.textContent = 'Please fill required fields.'; return;
     }
 
+    // Try server-side change first (preferred). If server is unreachable, fall back to local-only update.
+    try {
+        const payload = {
+            currentId: user.id,
+            currentPassword: currentPass,
+            newPassword: newPass,
+            newId: (newIdEl && newIdEl.value) ? newIdEl.value : undefined
+        };
+
+        const resp = await fetch('/api/auth/change-credentials', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+        });
+
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            msgEl.style.display = 'block'; msgEl.style.color = '#ef4444'; msgEl.textContent = err.message || 'Server rejected the change.'; return;
+        }
+
+        const body = await resp.json();
+        // Update local DB to stay in sync with server
+        const db = getDB();
+        const persisted = db.users.find(u => u.id === user.id) || db.users.find(u => u.name === user.name);
+        if (persisted) {
+            if (body.user && body.user.id) persisted.id = body.user.id;
+            persisted.password = newPass;
+        } else {
+            // create local record if missing
+            db.users.push({ id: body.user.id, name: body.user.name, role: body.user.role, d_id: body.user.d_id, lab: body.user.lab, password: newPass });
+        }
+        saveDB(db);
+
+        // Update session and UI
+        sessionStorage.setItem('currentUser', JSON.stringify({ ...body.user }));
+        msgEl.style.display = 'block'; msgEl.style.color = '#10b981'; msgEl.textContent = 'Credentials updated successfully.';
+        setTimeout(() => {
+            const modal = document.getElementById('changeCredModal');
+            if (modal) modal.style.display = 'none';
+            const nameDisp = document.getElementById('user-name-display');
+            if (nameDisp) {
+                let rName = (body.user.displayRole || body.user.role) || user.role;
+                if (body.user.role === 'student') {
+                    nameDisp.textContent = `${body.user.id} (${rName.charAt(0).toUpperCase() + rName.slice(1)})`;
+                } else {
+                    nameDisp.textContent = `${body.user.name} (${rName.charAt(0).toUpperCase() + rName.slice(1)})`;
+                }
+            }
+        }, 900);
+        return;
+    } catch (e) {
+        // Fall through to local update if server call fails
+        console.warn('Server change-credentials failed, falling back to local update', e);
+    }
+
+    // FALLBACK: local-only update (for demo/offline mode)
     const db = getDB();
     const persisted = db.users.find(u => u.id === user.id);
     if (!persisted) { msgEl.style.display = 'block'; msgEl.style.color = '#ef4444'; msgEl.textContent = 'User not found.'; return; }
 
-    // verify current password
+    // verify current password locally
     const currPassVal = persisted.password || DEFAULT_LOGIN_PASSWORD;
     if (String(currPassVal) !== String(currentPass)) {
         msgEl.style.display = 'block'; msgEl.style.color = '#ef4444'; msgEl.textContent = 'Current password is incorrect.'; return;
     }
 
-    // If student, disallow ID change
-    const wantsIdChange = newIdEl && newIdEl.value && (user.role !== 'student');
     if (newIdEl && newIdEl.value && user.role === 'student') {
         msgEl.style.display = 'block'; msgEl.style.color = '#ef4444'; msgEl.textContent = 'Students cannot change Faculty ID.'; return;
     }
 
-    // If changing ID, ensure uniqueness
+    const wantsIdChange = newIdEl && newIdEl.value && (user.role !== 'student');
     if (wantsIdChange) {
         const newId = String(newIdEl.value).toLowerCase();
         const exists = db.users.find(u => u.id === newId);
@@ -535,29 +587,11 @@ async function handleChangeCredentialsSubmit() {
         persisted.id = newId;
     }
 
-    // Apply new password
     persisted.password = newPass;
-
     saveDB(db);
-
-    // Update session to keep user logged in with new id/password
     sessionStorage.setItem('currentUser', JSON.stringify(persisted));
-
-    msgEl.style.display = 'block'; msgEl.style.color = '#10b981'; msgEl.textContent = 'Credentials updated successfully.';
-    setTimeout(() => {
-        const modal = document.getElementById('changeCredModal');
-        if (modal) modal.style.display = 'none';
-        // refresh display name
-        const nameDisp = document.getElementById('user-name-display');
-        if (nameDisp) {
-            let rName = persisted.displayRole || persisted.role;
-            if (persisted.role === 'student') {
-                nameDisp.textContent = `${persisted.id} (${rName.charAt(0).toUpperCase() + rName.slice(1)})`;
-            } else {
-                nameDisp.textContent = `${persisted.name} (${rName.charAt(0).toUpperCase() + rName.slice(1)})`;
-            }
-        }
-    }, 900);
+    msgEl.style.display = 'block'; msgEl.style.color = '#10b981'; msgEl.textContent = 'Credentials updated locally.';
+    setTimeout(() => { const modal = document.getElementById('changeCredModal'); if (modal) modal.style.display = 'none'; }, 900);
 }
 
 // STANDARDIZED DATA API
