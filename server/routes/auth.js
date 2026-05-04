@@ -265,11 +265,9 @@ router.post('/change-credentials', async (req, res) => {
 
     const before = { id: user.id, password: user.password };
 
-    // If requested, change ID (ensure uniqueness)
-    if (newId && String(newId).toLowerCase() !== String(user.id)) {
-      const exists = await User.findOne({ id: String(newId).toLowerCase() });
-      if (exists) return res.status(409).json({ success: false, message: 'Requested ID already in use' });
-      user.id = String(newId).toLowerCase();
+    // ID changes are not supported via this endpoint; ignore any newId in request
+    if (newId) {
+      return res.status(400).json({ success: false, message: 'ID changes are not allowed via this endpoint' });
     }
 
     // Update password

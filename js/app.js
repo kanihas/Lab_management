@@ -460,12 +460,8 @@ function openChangeCredentialsModal() {
     modal.innerHTML = `
         <div class="modal-content">
             <h3 style="margin-top:0;">Change Credentials</h3>
-            <p style="color:#94a3b8; font-size:0.9rem;">Faculty may change their Faculty ID and password. Others can change password only.</p>
+            <p style="color:#94a3b8; font-size:0.9rem;">Change your account password. ID changes are not allowed.</p>
             <form id="changeCredForm">
-                <div class="form-group" id="new-id-row" style="text-align:left; margin-bottom:0.75rem; display:none;">
-                    <label style="font-size:0.85rem; color:#94a3b8; display:block; margin-bottom:0.25rem;">New Faculty ID</label>
-                    <input type="text" id="newFacultyId" class="form-control" placeholder="e.g. 114211">
-                </div>
                 <div class="form-group" style="text-align:left; margin-bottom:0.75rem;">
                     <label style="font-size:0.85rem; color:#94a3b8; display:block; margin-bottom:0.25rem;">Current Password</label>
                     <input type="password" id="currentPass" class="form-control" placeholder="Current Password" required>
@@ -483,11 +479,8 @@ function openChangeCredentialsModal() {
         </div>`;
     document.body.appendChild(modal);
 
-    // Show/hide new ID field depending on role: only faculty can change ID
+    // No ID changes allowed; modal only handles password update
     const user = Auth.getCurrentUser();
-    if (user && (user.role === 'faculty')) {
-        document.getElementById('new-id-row').style.display = 'block';
-    }
 
     document.getElementById('changeCredForm').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -501,7 +494,6 @@ async function handleChangeCredentialsSubmit() {
     const user = Auth.getCurrentUser();
     if (!user) return window.location.href = 'index.html';
 
-    const newIdEl = document.getElementById('newFacultyId');
     const currentPass = document.getElementById('currentPass').value;
     const newPass = document.getElementById('newPass').value;
     const msgEl = document.getElementById('changeCredMsg');
@@ -516,8 +508,7 @@ async function handleChangeCredentialsSubmit() {
         const payload = {
             currentId: user.id,
             currentPassword: currentPass,
-            newPassword: newPass,
-            newId: (newIdEl && newIdEl.value) ? newIdEl.value : undefined
+            newPassword: newPass
         };
 
         const resp = await fetch('/api/auth/change-credentials', {
@@ -536,14 +527,13 @@ async function handleChangeCredentialsSubmit() {
             const body = await resp.json();
             // Update local DB to stay in sync with server
             const db = getDB();
-            const persisted = db.users.find(u => u.id === user.id) || db.users.find(u => u.name === user.name);
-            if (persisted) {
-                if (body.user && body.user.id) persisted.id = body.user.id;
-                persisted.password = newPass;
-            } else {
-                // create local record if missing
-                db.users.push({ id: body.user.id, name: body.user.name, role: body.user.role, d_id: body.user.d_id, lab: body.user.lab, password: newPass });
-            }
+                const persisted = db.users.find(u => u.id === user.id) || db.users.find(u => u.name === user.name);
+                if (persisted) {
+                    persisted.password = newPass;
+                } else {
+                    // create local record if missing
+                    db.users.push({ id: body.user.id, name: body.user.name, role: body.user.role, d_id: body.user.d_id, lab: body.user.lab, password: newPass });
+                }
             saveDB(db);
 
             // Update session and UI
@@ -566,11 +556,10 @@ async function handleChangeCredentialsSubmit() {
         }
 
         const body = await resp.json();
-        // Update local DB to stay in sync with server
+        // Update local DB to stay in sync with server (password only)
         const db = getDB();
         const persisted = db.users.find(u => u.id === user.id) || db.users.find(u => u.name === user.name);
         if (persisted) {
-            if (body.user && body.user.id) persisted.id = body.user.id;
             persisted.password = newPass;
         } else {
             // create local record if missing
@@ -611,16 +600,10 @@ async function handleChangeCredentialsSubmit() {
         msgEl.style.display = 'block'; msgEl.style.color = '#ef4444'; msgEl.textContent = 'Current password is incorrect.'; return;
     }
 
-    if (newIdEl && newIdEl.value && user.role !== 'faculty') {
-        msgEl.style.display = 'block'; msgEl.style.color = '#ef4444'; msgEl.textContent = 'Only faculty can change Faculty ID.'; return;
-    }
-
-    const wantsIdChange = newIdEl && newIdEl.value && (user.role === 'faculty');
-    if (wantsIdChange) {
-        const newId = String(newIdEl.value).toLowerCase();
-        const exists = db.users.find(u => u.id === newId);
-        if (exists) { msgEl.style.display = 'block'; msgEl.style.color = '#ef4444'; msgEl.textContent = 'Provided Faculty ID is already in use.'; return; }
-        persisted.id = newId;
+    // ID changes are not allowed in local fallback either
+    const anyIdInput = document.getElementById('newFacultyId');
+    if (anyIdInput && anyIdInput.value) {
+        msgEl.style.display = 'block'; msgEl.style.color = '#ef4444'; msgEl.textContent = 'ID changes are not allowed.'; return;
     }
 
     persisted.password = newPass;
