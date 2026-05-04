@@ -391,26 +391,22 @@ const Auth = {
             return false;
         }
 
-        const normalizedId = String(targetId || '').trim().toLowerCase();
         let matched = false;
-        const updatedUsers = [];
-        (db.users || []).forEach(user => {
+        const updatedUsers = (db.users || []).map(user => {
             if (String(user.id || '').toLowerCase() !== normalizedId) {
-                updatedUsers.push(user);
-                return;
+                return user;
             }
 
             matched = true;
+            return {
+                ...user,
+                password: updatedPassword
+            };
         });
 
         if (!matched) {
             return false;
         }
-
-        updatedUsers.push({
-                ...user,
-                password: updatedPassword
-        });
 
         db.users = updatedUsers;
 
