@@ -105,6 +105,17 @@ function isRoleMatchForLogin(user, requestedRole) {
     return user.role === requestedRole;
 }
 
+function findLatestUserById(users, id) {
+    const normalizedId = String(id || '').toLowerCase();
+    for (let index = (users || []).length - 1; index >= 0; index--) {
+        const user = users[index];
+        if (String(user?.id || '').toLowerCase() === normalizedId) {
+            return user;
+        }
+    }
+    return null;
+}
+
 const defaultData = (() => {
     const data = {
         users: [
@@ -334,7 +345,7 @@ const Auth = {
             if (!u.password) u.password = DEFAULT_LOGIN_PASSWORD;
         });
 
-        let user = db.users.find(u => String(u.id).toLowerCase() === String(id).toLowerCase()); 
+        let user = findLatestUserById(db.users, id);
 
         // Dynamic Student Enrollment
         if (!user && isStudentLoginId(id)) {
@@ -380,28 +391,34 @@ const Auth = {
             return false;
         }
 
+        const normalizedId = String(targetId || '').trim().toLowerCase();
         let matched = false;
-        db.users = (db.users || []).map(user => {
+        const updatedUsers = [];
+        (db.users || []).forEach(user => {
             if (String(user.id || '').toLowerCase() !== normalizedId) {
-                return user;
+                updatedUsers.push(user);
+                return;
             }
 
             matched = true;
-            return {
-                ...user,
-                password: updatedPassword
-            };
         });
 
         if (!matched) {
             return false;
         }
 
+        updatedUsers.push({
+                ...user,
+                password: updatedPassword
+        });
+
+        db.users = updatedUsers;
+
         saveDB(db);
 
         const currentUser = Auth.getCurrentUser();
         if (currentUser && String(currentUser.id || '').toLowerCase() === normalizedId) {
-            const refreshedUser = db.users.find(user => String(user.id || '').toLowerCase() === normalizedId);
+            const refreshedUser = findLatestUserById(db.users, normalizedId);
             if (refreshedUser) {
                 sessionStorage.setItem('currentUser', JSON.stringify(refreshedUser));
             }
@@ -416,7 +433,7 @@ const Auth = {
             return null;
         }
         const db = getDB();
-        const persistedUser = db.users.find(u => u.id === sessionUser.id);
+        const persistedUser = findLatestUserById(db.users, sessionUser.id);
         if (!persistedUser) {
             sessionStorage.removeItem('currentUser');
             window.location.href = 'index.html';
