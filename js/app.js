@@ -460,7 +460,7 @@ function openChangeCredentialsModal() {
     modal.innerHTML = `
         <div class="modal-content">
             <h3 style="margin-top:0;">Change Credentials</h3>
-            <p style="color:#94a3b8; font-size:0.9rem;">Faculty may change their Faculty ID and password. Students may change only password.</p>
+            <p style="color:#94a3b8; font-size:0.9rem;">Faculty may change their Faculty ID and password. Others can change password only.</p>
             <form id="changeCredForm">
                 <div class="form-group" id="new-id-row" style="text-align:left; margin-bottom:0.75rem; display:none;">
                     <label style="font-size:0.85rem; color:#94a3b8; display:block; margin-bottom:0.25rem;">New Faculty ID</label>
@@ -483,9 +483,9 @@ function openChangeCredentialsModal() {
         </div>`;
     document.body.appendChild(modal);
 
-    // Show/hide new ID field depending on role
+    // Show/hide new ID field depending on role: only faculty can change ID
     const user = Auth.getCurrentUser();
-    if (user && (user.role === 'admin' || user.role === 'technician' || user.role === 'staff')) {
+    if (user && (user.role === 'faculty')) {
         document.getElementById('new-id-row').style.display = 'block';
     }
 
@@ -611,11 +611,11 @@ async function handleChangeCredentialsSubmit() {
         msgEl.style.display = 'block'; msgEl.style.color = '#ef4444'; msgEl.textContent = 'Current password is incorrect.'; return;
     }
 
-    if (newIdEl && newIdEl.value && user.role === 'student') {
-        msgEl.style.display = 'block'; msgEl.style.color = '#ef4444'; msgEl.textContent = 'Students cannot change Faculty ID.'; return;
+    if (newIdEl && newIdEl.value && user.role !== 'faculty') {
+        msgEl.style.display = 'block'; msgEl.style.color = '#ef4444'; msgEl.textContent = 'Only faculty can change Faculty ID.'; return;
     }
 
-    const wantsIdChange = newIdEl && newIdEl.value && (user.role !== 'student');
+    const wantsIdChange = newIdEl && newIdEl.value && (user.role === 'faculty');
     if (wantsIdChange) {
         const newId = String(newIdEl.value).toLowerCase();
         const exists = db.users.find(u => u.id === newId);
